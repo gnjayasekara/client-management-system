@@ -10,6 +10,8 @@ using FluentValidation;
 
 using ClientManagement.Api.Features.FollowUps;
 
+using ClientManagement.Api.Features.Notes;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -46,6 +48,7 @@ var app = builder.Build();
 
 app.MapClientEndpoints();
 app.MapFollowUpEndpoints();
+app.MapNoteEndpoints();
 
 app.UseHttpsRedirection();
 app.UseCors("AngularApp");
