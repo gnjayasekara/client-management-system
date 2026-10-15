@@ -12,6 +12,8 @@ using ClientManagement.Api.Features.FollowUps;
 
 using ClientManagement.Api.Features.Notes;
 
+using ClientManagement.Api.Features.Dashboard;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -49,6 +51,7 @@ var app = builder.Build();
 app.MapClientEndpoints();
 app.MapFollowUpEndpoints();
 app.MapNoteEndpoints();
+app.MapDashboardEndpoints();
 
 app.UseHttpsRedirection();
 app.UseCors("AngularApp");
