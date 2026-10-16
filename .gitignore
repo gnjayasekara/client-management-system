@@ -149,3 +149,5 @@ tmp/
 # Uploaded files (future feature)
 uploads/
 storage/uploads/
+
+SQL querries/
