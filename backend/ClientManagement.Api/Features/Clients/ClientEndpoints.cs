@@ -13,7 +13,8 @@ public static class ClientEndpoints
         this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/clients")
-            .WithTags("Clients");
+            .WithTags("Clients")
+            .RequireAuthorization();
 
         group.MapGet("/", GetClientsHandler.HandleAsync);
 

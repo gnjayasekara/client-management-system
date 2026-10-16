@@ -1,6 +1,12 @@
+using System.Text;
+using ClientManagement.Api.Features.Auth;
+using ClientManagement.Api.Features.Auth.Services;
+using ClientManagement.Api.Infrastructure.Identity;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
 
 using ClientManagement.Api.Infrastructure.Data;
-using ClientManagement.Api.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,15 +52,71 @@ builder.Services.AddCors(options =>
 builder.Services.AddValidatorsFromAssemblyContaining<
     CreateClientValidator>();
 
-var app = builder.Build();
 
-app.MapClientEndpoints();
-app.MapFollowUpEndpoints();
-app.MapNoteEndpoints();
-app.MapDashboardEndpoints();
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException(
+        "JWT signing key not configured.");
+
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+{
+    throw new InvalidOperationException(
+        "JWT signing key must be at least 32 bytes.");
+}
+
+var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+    ?? throw new InvalidOperationException(
+        "JWT issuer not configured.");
+
+var jwtAudience = builder.Configuration["Jwt:Audience"]
+    ?? throw new InvalidOperationException(
+        "JWT audience not configured.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidIssuer = jwtIssuer,
+
+                ValidateAudience = true,
+                ValidAudience = jwtAudience,
+
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(jwtKey)),
+
+                ValidateLifetime = true,
+                RequireExpirationTime = true,
+                RequireSignedTokens = true,
+
+                ClockSkew = TimeSpan.Zero
+            };
+    });
+
+builder.Services.AddAuthorization();
+
+
+builder.Services.AddScoped<JwtTokenService>();
+
+var app = builder.Build();
 
 app.UseHttpsRedirection();
 app.UseCors("AngularApp");
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    await AdminSeeder.SeedAsync(
+        app.Services,
+        app.Configuration);
+}
 
 app.MapGet("/api/health", () =>
     Results.Ok(new
@@ -62,5 +124,16 @@ app.MapGet("/api/health", () =>
         status = "Healthy",
         application = "Client Management API"
     }));
+
+app.MapAuthEndpoints();
+
+app.MapClientEndpoints();
+app.MapFollowUpEndpoints();
+app.MapNoteEndpoints();
+app.MapDashboardEndpoints();
+
+
+
+
 
 app.Run();

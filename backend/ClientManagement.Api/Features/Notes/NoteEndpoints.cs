@@ -15,7 +15,8 @@ public static class NoteEndpoints
         // Routes nested under a client
         var clientNotes = app
             .MapGroup("/api/clients/{clientId:int}/notes")
-            .WithTags("Client Notes");
+            .WithTags("Client Notes")
+            .RequireAuthorization();
 
         // GET: Notes belonging to a client
         clientNotes.MapGet(
@@ -49,7 +50,8 @@ public static class NoteEndpoints
             "/api/notes/{id:int}",
             DeleteNoteHandler.HandleAsync
         )
-        .WithTags("Client Notes");
+        .WithTags("Client Notes")
+        .RequireAuthorization();
 
         return app;
     }

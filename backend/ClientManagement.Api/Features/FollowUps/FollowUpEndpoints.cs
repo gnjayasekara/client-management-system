@@ -13,7 +13,8 @@ public static class FollowUpEndpoints
         this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/followups")
-            .WithTags("FollowUps");
+            .WithTags("FollowUps")
+            .RequireAuthorization();
 
         // Read operations
         group.MapGet("/", GetFollowUpsHandler.HandleAsync);
