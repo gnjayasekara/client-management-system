@@ -8,6 +8,8 @@ import { FollowUpList } from './features/follow-ups/follow-up-list/follow-up-lis
 import { MainLayout } from './layout/main-layout/main-layout';
 import { authGuard } from './core/guards/auth.guard';
 
+import { ClientForm } from './features/clients/client-form/client-form';
+
 export const routes: Routes = [
   {
     path: 'login',
@@ -30,6 +32,14 @@ export const routes: Routes = [
       {
         path: 'clients',
         component: ClientList
+      },
+      {
+        path: 'clients/new',
+        component: ClientForm
+      },
+      {
+        path: 'clients/:id/edit',
+        component: ClientForm
       },
       {
         path: 'follow-ups',
