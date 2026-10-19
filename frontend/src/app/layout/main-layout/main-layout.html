@@ -1,0 +1,44 @@
+
+<div class="flex min-h-screen bg-slate-50">
+
+  <!-- Desktop sidebar -->
+  <div class="hidden w-64 shrink-0 md:block">
+    <div class="fixed inset-y-0 w-64">
+      <app-sidebar />
+    </div>
+  </div>
+
+  <!-- Mobile sidebar -->
+  @if (menuOpen()) {
+    <div class="fixed inset-0 z-40 md:hidden">
+
+      <button
+        type="button"
+        (click)="closeMenu()"
+        class="absolute inset-0 w-full bg-black/40"
+        aria-label="Close navigation"
+      ></button>
+
+      <div class="absolute inset-y-0 left-0 w-64">
+        <app-sidebar
+          (navigated)="closeMenu()"
+        />
+      </div>
+    </div>
+  }
+
+  <!-- Main content -->
+  <div class="flex min-w-0 flex-1 flex-col">
+
+    <app-header
+      title="Client Management System"
+      (menuClicked)="toggleMenu()"
+    />
+
+    <main class="flex-1 p-4 md:p-8">
+      <router-outlet />
+    </main>
+
+  </div>
+
+</div>

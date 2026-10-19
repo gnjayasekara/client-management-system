@@ -1,0 +1,52 @@
+
+<aside class="flex h-full flex-col bg-slate-900 text-white">
+
+  <div class="border-b border-slate-700 px-6 py-6">
+    <h1 class="text-xl font-bold">Client CMS</h1>
+    <p class="mt-1 text-xs text-slate-400">
+      Management Portal
+    </p>
+  </div>
+
+  <nav class="flex-1 space-y-2 px-3 py-6">
+
+    <a
+      routerLink="/dashboard"
+      routerLinkActive="bg-slate-700 text-white"
+      (click)="closeMenu()"
+      class="block rounded-lg px-4 py-3 text-sm text-slate-300 transition hover:bg-slate-800"
+    >
+      Dashboard
+    </a>
+
+    <a
+      routerLink="/clients"
+      routerLinkActive="bg-slate-700 text-white"
+      (click)="closeMenu()"
+      class="block rounded-lg px-4 py-3 text-sm text-slate-300 transition hover:bg-slate-800"
+    >
+      Clients
+    </a>
+
+    <a
+      routerLink="/follow-ups"
+      routerLinkActive="bg-slate-700 text-white"
+      (click)="closeMenu()"
+      class="block rounded-lg px-4 py-3 text-sm text-slate-300 transition hover:bg-slate-800"
+    >
+      Follow-ups
+    </a>
+
+  </nav>
+
+  <div class="border-t border-slate-700 p-4">
+    <button
+      type="button"
+      (click)="logout()"
+      class="w-full rounded-lg px-4 py-3 text-left text-sm text-slate-300 hover:bg-slate-800"
+    >
+      Logout
+    </button>
+  </div>
+
+</aside>
