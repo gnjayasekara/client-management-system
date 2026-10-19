@@ -123,6 +123,7 @@
               <th class="px-6 py-4">Phone</th>
               <th class="px-6 py-4">Status</th>
               <th class="px-6 py-4">Created</th>
+              <th class="px-6 py-4">Actions</th>
             </tr>
           </thead>
 
@@ -163,6 +164,35 @@
                 <td class="px-6 py-4 text-slate-600">
                   {{ client.createdAt | date:'mediumDate' }}
                 </td>
+
+                
+                <td class="px-6 py-4">
+                <div class="flex items-center gap-4">
+
+                    <a
+                    [routerLink]="['/clients', client.id]"
+                    class="font-medium text-blue-600 hover:underline"
+                    >
+                    View
+                    </a>
+
+                    <a
+                    [routerLink]="['/clients', client.id, 'edit']"
+                    class="font-medium text-slate-700 hover:underline"
+                    >
+                    Edit
+                    </a>
+
+                    <a
+                    [routerLink]="['/clients', client.id]"
+                    class="font-medium text-red-600 hover:underline"
+                    >
+                    Delete
+                    </a>
+
+                </div>
+                </td>
+
 
               </tr>
             }
