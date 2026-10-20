@@ -8,6 +8,7 @@ public record LoginResponse(
     string Username,
     IReadOnlyList<string> Roles,
     IReadOnlyList<string> Permissions,
-    string RefreshToken
+    string RefreshToken,
+    bool MustChangePassword
 );
 

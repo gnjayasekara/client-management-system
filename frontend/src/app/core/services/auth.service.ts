@@ -7,12 +7,22 @@ import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { LoginRequest, LoginResponse, RegisterUserRequest } from '../models/auth.model';
 
+
+import {
+  ApiMessage,
+  ConfirmEmailRequest,
+  ResetPasswordRequest,
+  ChangePasswordRequest
+} from '../models/auth.model';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+
+  readonly mustChangePassword = signal(false);
 
   private accessToken: string | null = null;
   private expiresAt: number | null = null;
@@ -55,6 +65,9 @@ export class AuthService {
         this.username.set(response.username);
         this.roles.set(response.roles ?? []);
         this.permissions.set(response.permissions ?? []);
+        this.mustChangePassword.set(
+          response.mustChangePassword ?? false
+        );
       })
     );
   }
@@ -65,6 +78,40 @@ export class AuthService {
       userData
     );
   }
+
+  
+  confirmEmail(request: ConfirmEmailRequest): Observable<ApiMessage> {
+    return this.http.post<ApiMessage>(
+      `${environment.apiUrl}/auth/confirm-email`,
+      request
+    );
+  }
+
+  forgotPassword(email: string): Observable<ApiMessage> {
+    return this.http.post<ApiMessage>(
+      `${environment.apiUrl}/auth/forgot-password`,
+      { email }
+    );
+  }
+
+  resetPassword(
+    request: ResetPasswordRequest
+  ): Observable<ApiMessage> {
+    return this.http.post<ApiMessage>(
+      `${environment.apiUrl}/auth/reset-password`,
+      request
+    );
+  }
+
+  changePassword(
+    request: ChangePasswordRequest
+  ): Observable<ApiMessage> {
+    return this.http.post<ApiMessage>(
+      `${environment.apiUrl}/auth/change-password`,
+      request
+    );
+  }
+
 
   hasRole(role: string): boolean {
     return this.roles().includes(role);
@@ -99,6 +146,7 @@ export class AuthService {
   logout(): void {
     this.clearSession();
     this.router.navigateByUrl('/login');
+    this.mustChangePassword.set(false);
   }
 
   private clearSession(): void {

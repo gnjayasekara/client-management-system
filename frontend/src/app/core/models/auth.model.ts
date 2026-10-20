@@ -9,9 +9,10 @@ export interface LoginResponse {
   tokenType: string;
   expiresAt: string;
   username: string;
-  roles?: string[];
-  permissions?: string[];
-  refreshToken?: string;
+  roles: string[];
+  permissions: string[];
+  refreshToken: string;
+  mustChangePassword: boolean;
 }
 
 export interface RefreshTokenRequest {
@@ -26,4 +27,30 @@ export interface RegisterUserRequest {
   role: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ConfirmEmailRequest {
+  userId: string;
+  token: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  userId: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ApiMessage {
+  message: string;
+  errors?: string[];
+}
 

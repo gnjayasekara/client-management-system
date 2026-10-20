@@ -7,5 +7,12 @@ public record ForgotPasswordRequest(
 public record ResetPasswordRequest(
     string UserId,
     string Token,
-    string NewPassword
+    string NewPassword,
+    string ConfirmPassword
+);
+
+public record ChangePasswordRequest(
+    string CurrentPassword,
+    string NewPassword,
+    string ConfirmPassword
 );

@@ -41,11 +41,19 @@ export class Login {
     this.loading.set(true);
     this.errorMessage.set('');
 
+    
     this.authService.login(this.credentials).subscribe({
-      next: () => {
+      next: (response) => {
         this.loading.set(false);
-        this.router.navigateByUrl('/dashboard');
+        this.errorMessage.set('');
+
+        if (response.mustChangePassword) {
+          this.router.navigateByUrl('/change-password');
+        } else {
+          this.router.navigateByUrl('/dashboard');
+        }
       },
+
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
 
@@ -53,8 +61,16 @@ export class Login {
           this.errorMessage.set(
             'Invalid username or password.'
           );
+        } else if (
+          error.status === 403 &&
+          error.error?.code === 'EMAIL_NOT_VERIFIED'
+        ) {
+          this.errorMessage.set(
+            'Please verify your email before logging in. Check your inbox.'
+          );
         } else if (error.status === 403) {
           this.errorMessage.set(
+            error.error?.message ||
             'Your account is not authorized to log in.'
           );
         } else if (error.status === 0) {
@@ -63,10 +79,12 @@ export class Login {
           );
         } else {
           this.errorMessage.set(
+            error.error?.message ||
             'Login failed. Please try again.'
           );
         }
       }
     });
+
   }
 }

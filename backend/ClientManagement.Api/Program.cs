@@ -22,6 +22,10 @@ using ClientManagement.Api.Features.Notes;
 
 using ClientManagement.Api.Features.Dashboard;
 
+using System.Security.Claims;
+
+
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,6 +158,8 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtTokenService>();
 
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
 var app = builder.Build();
 
 
@@ -165,6 +171,67 @@ app.UseCors("AngularApp");
 
 
 app.UseAuthentication();
+
+// Enforce mandatory first-login password change
+app.Use(async (context, next) =>
+{
+    // Only check authenticated API requests
+    if (context.User.Identity?.IsAuthenticated != true ||
+        !context.Request.Path.StartsWithSegments("/api"))
+    {
+        await next(context);
+        return;
+    }
+
+    // Allow users to change their password
+    if (context.Request.Path.Equals(
+        "/api/auth/change-password",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        await next(context);
+        return;
+    }
+
+    var userId =
+        context.User.FindFirst("sub")?.Value
+        ?? context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+    if (string.IsNullOrWhiteSpace(userId))
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status401Unauthorized;
+        return;
+    }
+
+    var userManager = context.RequestServices
+        .GetRequiredService<UserManager<AppUser>>();
+
+    var user = await userManager.FindByIdAsync(userId);
+
+    if (user is null)
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status401Unauthorized;
+        return;
+    }
+
+    if (user.MustChangePassword)
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status403Forbidden;
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            code = "PASSWORD_CHANGE_REQUIRED",
+            message = "You must change your password before accessing the application."
+        });
+
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
