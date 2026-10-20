@@ -5,6 +5,8 @@ using ClientManagement.Api.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
+using Microsoft.OpenApi;
+
 
 using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
@@ -20,7 +22,55 @@ using ClientManagement.Api.Features.Notes;
 
 using ClientManagement.Api.Features.Dashboard;
 
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddEndpointsApiExplorer();
+
+
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer(
+        (document, context, cancellationToken) =>
+        {
+            document.Components ??= new OpenApiComponents();
+
+            document.Components.SecuritySchemes ??=
+                new Dictionary<string, IOpenApiSecurityScheme>();
+
+            // Register JWT Bearer authentication
+            document.Components.SecuritySchemes["Bearer"] =
+                new OpenApiSecurityScheme
+                {
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Description = "Enter your JWT access token."
+                };
+
+            // Apply Bearer authentication to API operations
+            foreach (var path in document.Paths.Values)
+            {
+                foreach (var operation in path.Operations.Values)
+                {
+                    operation.Security ??=
+                        new List<OpenApiSecurityRequirement>();
+
+                    operation.Security.Add(
+                        new OpenApiSecurityRequirement
+                        {
+                            [new OpenApiSecuritySchemeReference(
+                                "Bearer",
+                                document
+                            )] = new List<string>()
+                        });
+                }
+            }
+
+            return Task.CompletedTask;
+        });
+});
+
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(
@@ -38,6 +88,7 @@ builder.Services
         options.Password.RequireUppercase = true;
         options.Password.RequireNonAlphanumeric = true;
     })
+    .AddRoles<IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
@@ -105,11 +156,31 @@ builder.Services.AddScoped<JwtTokenService>();
 
 var app = builder.Build();
 
+
+
+
 app.UseHttpsRedirection();
 app.UseCors("AngularApp");
 
+
+
 app.UseAuthentication();
 app.UseAuthorization();
+
+if (app.Environment.IsDevelopment())
+{
+    // In Development, keep it public and easy to test with Swagger UI
+    app.MapOpenApi(); 
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Client Management API V1");
+    });
+}
+else
+{
+    // In Production, secure the OpenAPI document endpoint behind authorization
+    app.MapOpenApi().RequireAuthorization();
+}
 
 if (app.Environment.IsDevelopment())
 {

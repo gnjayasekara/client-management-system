@@ -9,6 +9,10 @@ import { MainLayout } from './layout/main-layout/main-layout';
 import { authGuard } from './core/guards/auth.guard';
 
 import { ClientForm } from './features/clients/client-form/client-form';
+import { ClientDetails } from './features/clients/client-details/client-details';
+
+import { FollowUpForm } from './features/follow-ups/follow-up-form/follow-up-form';
+
 
 export const routes: Routes = [
   {
@@ -42,8 +46,20 @@ export const routes: Routes = [
         component: ClientForm
       },
       {
+        path: 'clients/:id',
+        component: ClientDetails
+      },
+      {
         path: 'follow-ups',
         component: FollowUpList
+      },
+      {
+        path: 'follow-ups/new',
+        component: FollowUpForm
+      },
+      {
+        path: 'follow-ups/:id/edit',
+        component: FollowUpForm
       }
     ]
   },

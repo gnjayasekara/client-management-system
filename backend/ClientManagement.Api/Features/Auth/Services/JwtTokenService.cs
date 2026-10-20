@@ -17,7 +17,9 @@ public class JwtTokenService
     }
 
     public (string Token, DateTime ExpiresAt) GenerateToken(
-        AppUser user)
+        AppUser user,
+        IEnumerable<string>? roles = null,
+        IEnumerable<string>? permissions = null)
     {
         var key = _configuration["Jwt:Key"]
             ?? throw new InvalidOperationException(
@@ -49,6 +51,23 @@ public class JwtTokenService
             new(JwtRegisteredClaimNames.Jti,
                 Guid.NewGuid().ToString())
         };
+
+        if (roles is not null)
+        {
+            foreach (var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+                claims.Add(new Claim("role", role));
+            }
+        }
+
+        if (permissions is not null)
+        {
+            foreach (var permission in permissions)
+            {
+                claims.Add(new Claim("permission", permission));
+            }
+        }
 
         var signingKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(key));

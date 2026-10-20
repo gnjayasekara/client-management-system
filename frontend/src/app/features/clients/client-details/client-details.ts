@@ -6,6 +6,17 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { ClientService } from '../../../core/services/client';
 import { Client } from '../../../core/models/client.model';
+import { AuthService } from '../../../core/services/auth.service';
+
+
+import { FollowUpService } from '../../../core/services/follow-up';
+import { FollowUp } from '../../../core/models/follow-up.model';
+
+
+import { ClientNoteService } from '../../../core/services/client-note';
+import { ClientNote } from '../../../core/models/client-note.model';
+
+
 
 @Component({
   selector: 'app-client-details',
@@ -17,12 +28,34 @@ export class ClientDetails implements OnInit {
   private readonly clientService = inject(ClientService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  readonly authService = inject(AuthService);
 
   readonly client = signal<Client | null>(null);
   readonly loading = signal(true);
   readonly deleting = signal(false);
   readonly showDeleteConfirmation = signal(false);
   readonly errorMessage = signal('');
+
+  
+  private readonly followUpService = inject(FollowUpService);
+
+  readonly clientFollowUps = signal<FollowUp[]>([]);
+  readonly followUpsLoading = signal(false);
+  readonly followUpsError = signal('');
+
+  
+  private readonly clientNoteService = inject(ClientNoteService);
+
+  readonly clientNotes = signal<ClientNote[]>([]);
+  readonly notesLoading = signal(false);
+  readonly notesSaving = signal(false);
+  readonly notesDeletingId = signal<number | null>(null);
+  readonly notesError = signal('');
+  readonly noteContent = signal('');
+
+  readonly selectedNote = signal<ClientNote | null>(null);
+
+
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
@@ -42,9 +75,13 @@ export class ClientDetails implements OnInit {
     this.errorMessage.set('');
 
     this.clientService.getClientById(id).subscribe({
+      
       next: (response) => {
         this.client.set(response);
         this.loading.set(false);
+
+        this.loadClientFollowUps(response.id);
+        this.loadClientNotes(response.id);
       },
       error: (error: HttpErrorResponse) => {
         this.loading.set(false);
@@ -57,6 +94,129 @@ export class ClientDetails implements OnInit {
       }
     });
   }
+
+  
+  loadClientFollowUps(clientId: number): void {
+    this.followUpsLoading.set(true);
+    this.followUpsError.set('');
+
+    this.followUpService.getFollowUps(clientId).subscribe({
+      next: (response) => {
+        this.clientFollowUps.set(response);
+        this.followUpsLoading.set(false);
+      },
+      error: () => {
+        this.followUpsLoading.set(false);
+        this.followUpsError.set(
+          'Unable to load client follow-ups.'
+        );
+      }
+    });
+  }
+
+  
+  loadClientNotes(clientId: number): void {
+    this.notesLoading.set(true);
+    this.notesError.set('');
+
+    this.clientNoteService.getNotes(clientId).subscribe({
+      next: (response) => {
+        this.clientNotes.set(response);
+        this.notesLoading.set(false);
+      },
+      error: () => {
+        this.notesLoading.set(false);
+        this.notesError.set('Unable to load client notes.');
+      }
+    });
+  }
+
+  
+  addNote(): void {
+    const currentClient = this.client();
+    const content = this.noteContent().trim();
+
+    if (
+      !currentClient ||
+      !content ||
+      this.notesSaving()
+    ) {
+      return;
+    }
+
+    this.notesSaving.set(true);
+    this.notesError.set('');
+
+    this.clientNoteService
+      .addNote(currentClient.id, { content })
+      .subscribe({
+        next: () => {
+          this.notesSaving.set(false);
+          this.noteContent.set('');
+
+          this.loadClientNotes(currentClient.id);
+        },
+        error: () => {
+          this.notesSaving.set(false);
+          this.notesError.set(
+            'Unable to add note. Please try again.'
+          );
+        }
+      });
+  }
+
+  
+  confirmDeleteNote(note: ClientNote): void {
+    if (this.notesDeletingId() !== null) {
+      return;
+    }
+
+    this.selectedNote.set(note);
+  }
+
+  cancelDeleteNote(): void {
+    if (this.notesDeletingId() === null) {
+      this.selectedNote.set(null);
+    }
+  }
+
+  deleteNote(): void {
+    const note = this.selectedNote();
+    const currentClient = this.client();
+
+    if (
+      !note ||
+      !currentClient ||
+      note.clientId !== currentClient.id ||
+      this.notesDeletingId() !== null
+    ) {
+      return;
+    }
+
+    this.notesDeletingId.set(note.id);
+    this.notesError.set('');
+
+    this.clientNoteService.deleteNote(note.id).subscribe({
+      next: () => {
+        this.notesDeletingId.set(null);
+        this.selectedNote.set(null);
+
+        this.loadClientNotes(currentClient.id);
+      },
+      error: () => {
+        this.notesDeletingId.set(null);
+        this.selectedNote.set(null);
+
+        this.notesError.set(
+          'Unable to delete note. Please try again.'
+        );
+      }
+    });
+  }
+
+
+
+
 
   openDeleteConfirmation(): void {
     this.showDeleteConfirmation.set(true);

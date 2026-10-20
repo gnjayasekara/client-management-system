@@ -5,5 +5,9 @@ public record LoginResponse(
     string AccessToken,
     string TokenType,
     DateTime ExpiresAt,
-    string Username
+    string Username,
+    IReadOnlyList<string> Roles,
+    IReadOnlyList<string> Permissions,
+    string RefreshToken
 );
+

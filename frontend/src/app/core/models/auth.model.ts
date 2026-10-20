@@ -9,4 +9,21 @@ export interface LoginResponse {
   tokenType: string;
   expiresAt: string;
   username: string;
+  roles?: string[];
+  permissions?: string[];
+  refreshToken?: string;
 }
+
+export interface RefreshTokenRequest {
+  userId: string;
+  refreshToken: string;
+}
+
+export interface RegisterUserRequest {
+  username: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
+

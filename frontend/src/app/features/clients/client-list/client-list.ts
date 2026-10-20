@@ -9,6 +9,8 @@ import { RouterLink } from '@angular/router';
 import { ClientService } from '../../../core/services/client';
 import { Client } from '../../../core/models/client.model';
 
+import { AuthService } from '../../../core/services/auth.service';
+
 @Component({
   selector: 'app-client-list',
   imports: [FormsModule, DatePipe, RouterLink],
@@ -22,6 +24,8 @@ export class ClientList implements OnInit {
   readonly clients = signal<Client[]>([]);
   readonly loading = signal(false);
   readonly errorMessage = signal('');
+
+  readonly authService = inject(AuthService);
 
   search = '';
   statusFilter = 'all';

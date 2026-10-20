@@ -18,12 +18,21 @@
 
   <div class="flex items-center gap-3">
     <div class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">
-      A
+      {{ (username() || 'U')[0].toUpperCase() }}
     </div>
 
-    <span class="hidden text-sm font-medium text-slate-700 sm:inline">
-      {{ username() || 'Administrator' }}
-    </span>
+    <div class="hidden flex-col sm:flex">
+      <span class="text-sm font-medium text-slate-700">
+        {{ username() || 'User' }}
+      </span>
+      <div class="flex gap-1">
+        @for (role of roles(); track role) {
+          <span class="inline-block text-xs font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800">
+            {{ role }}
+          </span>
+        }
+      </div>
+    </div>
   </div>
 
 </header>

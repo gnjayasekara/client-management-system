@@ -1,0 +1,194 @@
+
+<section class="mx-auto max-w-3xl space-y-6">
+
+  <!-- Page heading -->
+  <div>
+    <a
+      routerLink="/follow-ups"
+      class="text-sm font-medium text-slate-500 hover:text-slate-900"
+    >
+      ← Back to Follow-ups
+    </a>
+
+    <h1 class="mt-4 text-2xl font-bold text-slate-900">
+      {{ isEditMode() ? 'Edit Follow-up' : 'Add New Follow-up' }}
+    </h1>
+
+    <p class="mt-1 text-sm text-slate-500">
+      {{ isEditMode()
+        ? 'Update the follow-up activity below.'
+        : 'Create a follow-up activity for an existing client.' }}
+    </p>
+  </div>
+
+  @if (loading()) {
+    <div class="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+      Loading form information...
+    </div>
+  } @else {
+
+    <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+
+      @if (errorMessage()) {
+        <div
+          role="alert"
+          class="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <form
+        #followUpForm="ngForm"
+        (ngSubmit)="onSubmit()"
+        class="space-y-6"
+      >
+
+        <!-- Client selection -->
+        <div>
+          <label
+            for="clientId"
+            class="mb-2 block text-sm font-medium text-slate-700"
+          >
+            Client *
+          </label>
+
+          <select
+            id="clientId"
+            name="clientId"
+            [(ngModel)]="form.clientId"
+            #clientField="ngModel"
+            required
+            [disabled]="isEditMode()"
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-700 disabled:bg-slate-100"
+          >
+            <option [ngValue]="null" disabled>
+              Select a client
+            </option>
+
+            @for (client of clients(); track client.id) {
+              <option [ngValue]="client.id">
+                {{ client.name }}
+                {{ client.company ? ' — ' + client.company : '' }}
+              </option>
+            }
+          </select>
+
+          @if (clientField.invalid && clientField.touched) {
+            <p class="mt-1 text-xs text-red-600">
+              Please select a client.
+            </p>
+          }
+
+          @if (isEditMode()) {
+            <p class="mt-2 text-xs text-slate-500">
+              The associated client cannot be changed when editing.
+            </p>
+          }
+        </div>
+
+        <!-- Follow-up title -->
+        <div>
+          <label
+            for="title"
+            class="mb-2 block text-sm font-medium text-slate-700"
+          >
+            Follow-up Title *
+          </label>
+
+          <input
+            id="title"
+            type="text"
+            name="title"
+            [(ngModel)]="form.title"
+            #titleField="ngModel"
+            required
+            maxlength="200"
+            placeholder="e.g. Call client to discuss proposal"
+            class="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-700"
+          />
+
+          @if (titleField.invalid && titleField.touched) {
+            <p class="mt-1 text-xs text-red-600">
+              Follow-up title is required.
+            </p>
+          }
+        </div>
+
+        <!-- Due date -->
+        <div>
+          <label
+            for="dueDate"
+            class="mb-2 block text-sm font-medium text-slate-700"
+          >
+            Due Date *
+          </label>
+
+          <input
+            id="dueDate"
+            type="date"
+            name="dueDate"
+            [(ngModel)]="form.dueDate"
+            #dueDateField="ngModel"
+            required
+            class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-700"
+          />
+
+          @if (dueDateField.invalid && dueDateField.touched) {
+            <p class="mt-1 text-xs text-red-600">
+              Please select a due date.
+            </p>
+          }
+        </div>
+
+        <!-- Completion status for editing -->
+        @if (isEditMode()) {
+          <div>
+            <label
+              for="isCompleted"
+              class="mb-2 block text-sm font-medium text-slate-700"
+            >
+              Status
+            </label>
+
+            <select
+              id="isCompleted"
+              name="isCompleted"
+              [(ngModel)]="form.isCompleted"
+              class="w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm"
+            >
+              <option [ngValue]="false">Pending</option>
+              <option [ngValue]="true">Completed</option>
+            </select>
+          </div>
+        }
+
+        <!-- Form actions -->
+        <div class="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-6">
+
+          <a
+            routerLink="/follow-ups"
+            class="rounded-lg border border-slate-300 px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            Cancel
+          </a>
+
+          <button
+            type="submit"
+            [disabled]="followUpForm.invalid || loading() || saving() || clients().length === 0"
+            class="rounded-lg bg-slate-900 px-6 py-3 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            @if (saving()) {
+              Saving...
+            } @else {
+              {{ isEditMode() ? 'Update Follow-up' : 'Create Follow-up' }}
+            }
+          </button>
+
+        </div>
+      </form>
+
+    </div>
+  }
+
+</section>

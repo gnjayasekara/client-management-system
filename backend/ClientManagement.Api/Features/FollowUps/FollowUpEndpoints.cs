@@ -7,6 +7,8 @@ using FluentValidation;
 
 namespace ClientManagement.Api.Features.FollowUps;
 
+using ClientManagement.Api.Infrastructure.Identity;
+
 public static class FollowUpEndpoints
 {
     public static RouteGroupBuilder MapFollowUpEndpoints(
@@ -68,10 +70,20 @@ public static class FollowUpEndpoints
         );
 
         // Delete
-        group.MapDelete(
+       group.MapDelete(
             "/{id:int}",
             DeleteFollowUpHandler.HandleAsync
-        );
+        )
+        .RequireAuthorization(policy =>
+            policy.RequireRole(
+                AppRoles.SuperAdmin,
+                AppRoles.Admin,
+                AppRoles.Manager
+            ))
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound);
 
         return group;
     }

@@ -1,1 +1,332 @@
-<p>follow-up-list works!</p>
+
+<section class="space-y-6">
+
+  <!-- Page heading -->
+  
+<div class="flex flex-wrap items-center justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">
+      Follow-ups
+    </h1>
+
+    <p class="mt-1 text-sm text-slate-500">
+      Track pending and completed client follow-up activities.
+    </p>
+  </div>
+
+    <a
+        routerLink="/follow-ups/new"
+        class="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+        + Add Follow-up
+        </a>
+</div>
+
+
+@if (actionError()) {
+  <div
+    role="alert"
+    class="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+  >
+    {{ actionError() }}
+  </div>
+}
+
+
+
+    <!-- Filters -->
+    <form
+      (ngSubmit)="loadFollowUps()"
+      class="flex flex-col gap-4 border-b border-slate-200 p-5 lg:flex-row lg:items-end"
+    >
+
+      <!-- Client filter -->
+      <div class="flex-1">
+        <label
+          for="clientId"
+          class="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Client ID
+        </label>
+
+        <input
+          id="clientId"
+          name="clientId"
+          type="number"
+          min="1"
+          step="1"
+          [(ngModel)]="clientIdFilter"
+          placeholder="All clients"
+          class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-slate-700"
+        />
+      </div>
+
+      <!-- Completion status filter -->
+      <div class="flex-1">
+        <label
+          for="status"
+          class="mb-2 block text-sm font-medium text-slate-700"
+        >
+          Status
+        </label>
+
+        <select
+          id="status"
+          name="status"
+          [(ngModel)]="statusFilter"
+          class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm"
+        >
+          <option value="all">All Statuses</option>
+          <option value="pending">Pending</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        class="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+      >
+        Apply Filters
+      </button>
+
+      <button
+        type="button"
+        (click)="clearFilters()"
+        class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+      >
+        Clear
+      </button>
+
+    </form>
+
+    <div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"></div>
+
+    @if (filterError()) {
+      <div
+        role="alert"
+        class="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700"
+      >
+        {{ filterError() }}
+      </div>
+    }
+
+    <!-- Loading -->
+    @if (loading()) {
+      <div class="p-10 text-center text-sm text-slate-500">
+        Loading follow-ups...
+      </div>
+    }
+
+    <!-- Error -->
+    @else if (errorMessage()) {
+      <div class="p-10 text-center">
+        <p class="text-sm text-red-600">
+          {{ errorMessage() }}
+        </p>
+
+        <button
+          type="button"
+          (click)="loadFollowUps()"
+          class="mt-3 text-sm font-medium text-blue-600 hover:underline"
+        >
+          Try Again
+        </button>
+      </div>
+    }
+
+    <!-- Empty results -->
+    @else if (followUps().length === 0) {
+      <div class="p-10 text-center">
+        <h2 class="font-semibold text-slate-800">
+          No follow-ups found
+        </h2>
+
+        <p class="mt-2 text-sm text-slate-500">
+          There are no follow-up activities matching your filters.
+        </p>
+      </div>
+    }
+
+    
+
+    <!-- Follow-up table -->
+    @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+
+          <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="px-6 py-4">Title</th>
+              <th class="px-6 py-4">Client</th>
+              <th class="px-6 py-4">Due Date</th>
+              <th class="px-6 py-4">Status</th>
+              <th class="px-6 py-4">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody class="divide-y divide-slate-100">
+
+            @for (followUp of followUps(); track followUp.id) {
+              <tr class="hover:bg-slate-50">
+
+                <td class="px-6 py-4">
+                  <p class="font-medium text-slate-900">
+                    {{ followUp.title }}
+                  </p>
+                </td>
+
+                <td class="px-6 py-4 text-slate-600">
+                  Client #{{ followUp.clientId }}
+                </td>
+
+                <td class="px-6 py-4">
+                  <p
+                    [class.text-red-600]="isOverdue(followUp)"
+                    [class.font-semibold]="isOverdue(followUp)"
+                    class="text-slate-600"
+                  >
+                    {{ followUp.dueDate | date:'mediumDate' }}
+                  </p>
+                </td>
+
+                <td class="px-6 py-4">
+
+                  @if (followUp.isCompleted) {
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+                      Completed
+                    </span>
+                  } @else if (isOverdue(followUp)) {
+                    <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-700">
+                      Overdue
+                    </span>
+                  } @else {
+                    <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+                      Pending
+                    </span>
+                  }
+
+                </td>
+
+                
+                
+                <td class="px-6 py-4">
+                <div class="flex flex-wrap items-center gap-3">
+
+                    <!-- Edit -->
+                    <a
+                    [routerLink]="['/follow-ups', followUp.id, 'edit']"
+                    class="text-sm font-medium text-blue-600 hover:underline"
+                    >
+                    Edit
+                    </a>
+
+                    <!-- Mark Completed -->
+                    @if (!followUp.isCompleted) {
+                    <button
+                        type="button"
+                        (click)="completeFollowUp(followUp)"
+                        [disabled]="actionLoadingId() !== null"
+                        class="text-sm font-medium text-green-700 hover:underline disabled:opacity-50"
+                    >
+                        {{ actionLoadingId() === followUp.id
+                        ? 'Processing...'
+                        : 'Complete' }}
+                    </button>
+                    }
+
+                    <!-- Delete -->
+                    @if (authService.hasPermission('followups.delete')) {
+                    <button
+                        type="button"
+                        (click)="openDeleteConfirmation(followUp)"
+                        [disabled]="actionLoadingId() !== null"
+                        class="text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
+                    >
+                        Delete
+                    </button>
+}
+
+                </div>
+                </td>
+
+
+
+              </tr>
+            }
+
+          </tbody>
+
+        </table>
+      </div>
+    }
+    
+
+    <!-- Footer -->
+    <div class="border-t border-slate-200 px-6 py-4">
+      <p class="text-xs text-slate-500">
+        Showing {{ followUps().length }} follow-up(s)
+      </p>
+    </div>
+
+    
+    @if (showDeleteConfirmation() && selectedFollowUp(); as followUp) {
+
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+
+        <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-follow-up-title"
+        aria-describedby="delete-follow-up-description"
+        class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+        >
+
+        <h2
+            id="delete-follow-up-title"
+            class="text-xl font-semibold text-slate-900"
+        >
+            Delete Follow-up?
+        </h2>
+
+        <p
+            id="delete-follow-up-description"
+            class="mt-3 text-sm leading-6 text-slate-600"
+        >
+            Are you sure you want to delete
+            <strong>{{ followUp.title }}</strong>?
+
+            This action cannot be undone.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+
+            <button
+            type="button"
+            (click)="closeDeleteConfirmation()"
+            [disabled]="actionLoadingId() !== null"
+            class="rounded-lg border border-slate-300 px-5 py-2.5 text-sm text-slate-700 disabled:opacity-50"
+            >
+            Cancel
+            </button>
+
+            <button
+            type="button"
+            (click)="deleteFollowUp()"
+            [disabled]="actionLoadingId() !== null"
+            class="rounded-lg bg-red-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            >
+            {{ actionLoadingId() !== null
+                ? 'Deleting...'
+                : 'Delete Follow-up' }}
+            </button>
+
+        </div>
+
+        </div>
+    </div>
+
+    }
+
+
+
+</section>

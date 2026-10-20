@@ -57,7 +57,7 @@ public static class ClientEndpoints
         group.MapDelete(
             "/{id:int}",
             DeleteClientHandler.HandleAsync
-        );
+        ).RequireAuthorization(policy => policy.RequireRole(ClientManagement.Api.Infrastructure.Identity.AppRoles.Admin));
 
         return group;
     }

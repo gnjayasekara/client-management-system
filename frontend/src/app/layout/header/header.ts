@@ -14,4 +14,5 @@ export class Header {
   readonly menuClicked = output<void>();
 
   readonly username = this.authService.username;
+  readonly roles = this.authService.roles;
 }
