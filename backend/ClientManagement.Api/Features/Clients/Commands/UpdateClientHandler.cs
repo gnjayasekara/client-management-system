@@ -2,6 +2,7 @@
 using ClientManagement.Api.Features.Clients.DTOs;
 using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using ClientManagement.Api.Infrastructure.Realtime;
 
 namespace ClientManagement.Api.Features.Clients.Commands;
 
@@ -11,6 +12,7 @@ public static class UpdateClientHandler
         int id,
         UpdateClientRequest request,
         AppDbContext db,
+        IRealtimeNotifier realtimeNotifier,
         CancellationToken ct)
     {
         var client = await db.Clients
@@ -27,6 +29,12 @@ public static class UpdateClientHandler
         client.IsActive = request.IsActive;
 
         await db.SaveChangesAsync(ct);
+
+        await realtimeNotifier.ClientChangedAsync(
+            client.Id,
+            "Updated",
+            ct
+        );
 
         return Results.NoContent();
     }

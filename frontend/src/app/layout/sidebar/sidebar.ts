@@ -3,6 +3,7 @@ import { Component, inject, output, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { AddUserModal } from '../../features/auth/add-user-modal/add-user-modal';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -16,6 +17,8 @@ export class Sidebar {
   readonly navigated = output<void>();
   readonly showAddUserModal = signal(false);
 
+  readonly notificationService = inject(NotificationService);
+
   openAddUser(): void {
     this.showAddUserModal.set(true);
   }
@@ -25,6 +28,8 @@ export class Sidebar {
   }
 
   logout(): void {
+    this.notificationService.clear();
+
     this.navigated.emit();
     this.authService.logout();
   }

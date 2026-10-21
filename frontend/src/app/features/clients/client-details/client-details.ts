@@ -16,6 +16,10 @@ import { FollowUp } from '../../../core/models/follow-up.model';
 import { ClientNoteService } from '../../../core/services/client-note';
 import { ClientNote } from '../../../core/models/client-note.model';
 
+import { RealtimeService } from '../../../core/services/realtime.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { DestroyRef } from '@angular/core';
+
 
 
 @Component({
@@ -55,6 +59,9 @@ export class ClientDetails implements OnInit {
 
   readonly selectedNote = signal<ClientNote | null>(null);
 
+  private readonly realtimeService = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+
 
 
   ngOnInit(): void {
@@ -68,6 +75,40 @@ export class ClientDetails implements OnInit {
     }
 
     this.loadClient(id);
+    this.loadClientFollowUps(id);
+    this.loadClientNotes(id);
+
+    
+    this.realtimeService.noteChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => {
+        if (event.entityId === id) {
+          this.loadClientNotes(id);
+        }
+      });
+
+    this.realtimeService.clientChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(event => {
+        if (event.entityId === id) {
+          this.loadClientNotes(id);
+        }
+      });
+
+    this.realtimeService.followUpChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadClientFollowUps(id);
+      });
+
+    this.realtimeService.reconnected$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadClient(id);
+        this.loadClientNotes(id);
+        this.loadClientFollowUps(id);
+      });
+
   }
 
   loadClient(id: number): void {

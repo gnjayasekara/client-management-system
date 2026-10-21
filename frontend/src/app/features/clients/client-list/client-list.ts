@@ -1,5 +1,5 @@
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -10,6 +10,10 @@ import { ClientService } from '../../../core/services/client';
 import { Client } from '../../../core/models/client.model';
 
 import { AuthService } from '../../../core/services/auth.service';
+
+
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RealtimeService } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-client-list',
@@ -27,11 +31,31 @@ export class ClientList implements OnInit {
 
   readonly authService = inject(AuthService);
 
+  
+  private readonly realtimeService = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+
+
   search = '';
   statusFilter = 'all';
 
   ngOnInit(): void {
     this.loadClients();
+    
+  // Refresh clients when another user changes client data
+  this.realtimeService.clientChanged$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => {
+      this.loadClients();
+    });
+
+  // Reload after reconnection to catch missed changes
+  this.realtimeService.reconnected$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => {
+      this.loadClients();
+    });
+
   }
 
   loadClients(): void {

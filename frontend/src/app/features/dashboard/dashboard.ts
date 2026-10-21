@@ -1,11 +1,14 @@
 
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, DestroyRef } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { DashboardService } from '../../core/services/dashboard';
 import { DashboardStats } from '../../core/models/dashboard.model';
+
+import { RealtimeService } from '../../core/services/realtime.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,9 +22,24 @@ export class Dashboard implements OnInit {
   readonly stats = signal<DashboardStats | null>(null);
   readonly loading = signal(true);
   readonly errorMessage = signal('');
+  private readonly realtimeService = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   ngOnInit(): void {
     this.loadDashboard();
+
+  this.realtimeService.clientChanged$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadDashboard());
+
+  this.realtimeService.followUpChanged$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadDashboard());
+
+  this.realtimeService.reconnected$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadDashboard());
+
   }
 
   loadDashboard(): void {

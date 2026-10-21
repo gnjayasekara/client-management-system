@@ -24,6 +24,8 @@ using ClientManagement.Api.Features.Dashboard;
 
 using System.Security.Claims;
 
+using ClientManagement.Api.Infrastructure.Realtime;
+
 
 
 
@@ -101,7 +103,8 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AngularApp", policy =>
         policy.WithOrigins("http://localhost:4200")
               .AllowAnyHeader()
-              .AllowAnyMethod());
+              .AllowAnyMethod()
+              .AllowCredentials());
 });
 
 builder.Services.AddValidatorsFromAssemblyContaining<
@@ -151,6 +154,38 @@ builder.Services
 
                 ClockSkew = TimeSpan.Zero
             };
+        
+        options.Events ??= new JwtBearerEvents();
+
+        var existingOnMessageReceived =
+            options.Events.OnMessageReceived;
+
+        options.Events.OnMessageReceived = async context =>
+        {
+            // Preserve any existing token handling
+            if (existingOnMessageReceived is not null)
+            {
+                await existingOnMessageReceived(context);
+            }
+
+            if (!string.IsNullOrEmpty(context.Token))
+            {
+                return;
+            }
+
+            var accessToken =
+                context.Request.Query["access_token"];
+
+            var path = context.HttpContext.Request.Path;
+
+            // Only accept query-string JWTs for the SignalR Hub
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/hubs/notifications"))
+            {
+                context.Token = accessToken;
+            }
+        };
+
     });
 
 builder.Services.AddAuthorization();
@@ -159,6 +194,12 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+
+builder.Services.AddSignalR();
+
+builder.Services.AddScoped<
+    IRealtimeNotifier,
+    SignalRRealtimeNotifier>();
 
 var app = builder.Build();
 
@@ -173,18 +214,39 @@ app.UseCors("AngularApp");
 app.UseAuthentication();
 
 // Enforce mandatory first-login password change
+
 app.Use(async (context, next) =>
 {
-    // Only check authenticated API requests
-    if (context.User.Identity?.IsAuthenticated != true ||
-        !context.Request.Path.StartsWithSegments("/api"))
+    var path = context.Request.Path;
+
+    // Only inspect authenticated requests
+    if (context.User.Identity?.IsAuthenticated != true)
     {
         await next(context);
         return;
     }
 
-    // Allow users to change their password
-    if (context.Request.Path.Equals(
+    var isApi = path.StartsWithSegments("/api");
+    var isHub = path.StartsWithSegments("/hubs/notifications");
+
+    // Ignore requests outside application APIs and SignalR
+    if (!isApi && !isHub)
+    {
+        await next(context);
+        return;
+    }
+
+    // Public health check should remain accessible
+    if (path.Equals(
+        "/api/health",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        await next(context);
+        return;
+    }
+
+    // Users must be able to change their passwords
+    if (path.Equals(
         "/api/auth/change-password",
         StringComparison.OrdinalIgnoreCase))
     {
@@ -215,6 +277,20 @@ app.Use(async (context, next) =>
         return;
     }
 
+    if (!await userManager.IsEmailConfirmedAsync(user))
+    {
+        context.Response.StatusCode =
+            StatusCodes.Status403Forbidden;
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            code = "EMAIL_NOT_VERIFIED",
+            message = "Please verify your email."
+        });
+
+        return;
+    }
+
     if (user.MustChangePassword)
     {
         context.Response.StatusCode =
@@ -223,7 +299,7 @@ app.Use(async (context, next) =>
         await context.Response.WriteAsJsonAsync(new
         {
             code = "PASSWORD_CHANGE_REQUIRED",
-            message = "You must change your password before accessing the application."
+            message = "Please change your password before accessing the application."
         });
 
         return;
@@ -231,6 +307,7 @@ app.Use(async (context, next) =>
 
     await next(context);
 });
+
 
 app.UseAuthorization();
 
@@ -269,6 +346,9 @@ app.MapClientEndpoints();
 app.MapFollowUpEndpoints();
 app.MapNoteEndpoints();
 app.MapDashboardEndpoints();
+
+app.MapHub<NotificationHub>("/hubs/notifications")
+    .RequireAuthorization();
 
 
 

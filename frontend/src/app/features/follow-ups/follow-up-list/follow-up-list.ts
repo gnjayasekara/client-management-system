@@ -4,7 +4,8 @@ import {
   OnInit,
   OnDestroy,
   inject,
-  signal
+  signal,
+  DestroyRef
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -17,6 +18,8 @@ import { FollowUp } from '../../../core/models/follow-up.model';
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../core/services/auth.service';
+import { RealtimeService } from '../../../core/services/realtime.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-follow-up-list',
@@ -41,12 +44,30 @@ export class FollowUpList implements OnInit, OnDestroy {
 
   readonly authService = inject(AuthService);
 
+  
+  private readonly realtimeService = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+
+
 
   statusFilter = 'all';
   clientIdFilter: number | null = null;
 
   ngOnInit(): void {
     this.loadFollowUps();
+    
+  this.realtimeService.followUpChanged$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadFollowUps());
+
+  this.realtimeService.clientChanged$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadFollowUps());
+
+  this.realtimeService.reconnected$
+    .pipe(takeUntilDestroyed(this.destroyRef))
+    .subscribe(() => this.loadFollowUps());
+
   }
 
   ngOnDestroy(): void {

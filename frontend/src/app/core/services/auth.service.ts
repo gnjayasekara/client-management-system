@@ -143,6 +143,12 @@ export class AuthService {
     return authenticated;
   }
 
+  getAccessToken(): string | null {
+    return this.isAuthenticated()
+      ? this.accessToken
+      : null;
+  }
+
   logout(): void {
     this.clearSession();
     this.router.navigateByUrl('/login');

@@ -3,6 +3,7 @@ using ClientManagement.Api.Features.Notes.Commands;
 using ClientManagement.Api.Features.Notes.DTOs;
 using ClientManagement.Api.Features.Notes.Queries;
 using ClientManagement.Api.Infrastructure.Data;
+using ClientManagement.Api.Infrastructure.Realtime;
 using FluentValidation;
 
 namespace ClientManagement.Api.Features.Notes;
@@ -30,6 +31,8 @@ public static class NoteEndpoints
             CreateNoteRequest request,
             IValidator<CreateNoteRequest> validator,
             AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(
@@ -42,7 +45,7 @@ public static class NoteEndpoints
             }
 
             return await CreateNoteHandler.HandleAsync(
-                clientId, request, db, ct);
+                clientId, request, db, realtimeNotifier, loggerFactory, ct);
         });
 
         // DELETE: Delete a note by its ID

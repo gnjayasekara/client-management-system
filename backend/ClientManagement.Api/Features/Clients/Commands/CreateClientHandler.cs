@@ -2,6 +2,7 @@
 using ClientManagement.Api.Features.Clients.DTOs;
 using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using ClientManagement.Api.Infrastructure.Realtime;
 
 namespace ClientManagement.Api.Features.Clients.Commands;
 
@@ -10,6 +11,7 @@ public static class CreateClientHandler
     public static async Task<IResult> HandleAsync(
         CreateClientRequest request,
         AppDbContext db,
+        IRealtimeNotifier realtimeNotifier,
         CancellationToken ct)
     {
         var client = new Client
@@ -24,6 +26,13 @@ public static class CreateClientHandler
 
         db.Clients.Add(client);
         await db.SaveChangesAsync(ct);
+
+         // 2. Notify connected users after successful save
+        await realtimeNotifier.ClientChangedAsync(
+            client.Id,
+            "Created",
+            ct
+        );
 
         var response = new ClientResponse(
             client.Id,

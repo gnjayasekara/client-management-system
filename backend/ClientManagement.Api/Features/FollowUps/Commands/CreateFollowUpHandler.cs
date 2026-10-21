@@ -1,6 +1,7 @@
 
 using ClientManagement.Api.Features.FollowUps.DTOs;
 using ClientManagement.Api.Infrastructure.Data;
+using ClientManagement.Api.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClientManagement.Api.Features.FollowUps.Commands;
@@ -10,15 +11,22 @@ public static class CreateFollowUpHandler
     public static async Task<IResult> HandleAsync(
         CreateFollowUpRequest request,
         AppDbContext db,
+        IRealtimeNotifier realtimeNotifier,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
-        var clientExists = await db.Clients
-            .AnyAsync(x => x.Id == request.ClientId, ct);
+        // Find the client and retrieve its name
+        var clientName = await db.Clients
+            .Where(x => x.Id == request.ClientId)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync(ct);
 
-        if (!clientExists)
+        if (clientName is null)
         {
-            return Results.NotFound(
-                new { message = "Client not found." });
+            return Results.NotFound(new
+            {
+                message = "Client not found."
+            });
         }
 
         var followUp = new FollowUp
@@ -30,12 +38,31 @@ public static class CreateFollowUpHandler
         };
 
         db.FollowUps.Add(followUp);
+
+        // Save the follow-up before broadcasting
         await db.SaveChangesAsync(ct);
 
-        var clientName = await db.Clients
-            .Where(x => x.Id == followUp.ClientId)
-            .Select(x => x.Name)
-            .SingleAsync(ct);
+        // Notify other connected users
+        try
+        {
+            await realtimeNotifier.FollowUpChangedAsync(
+                followUp.Id,
+                "Created",
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            var logger = loggerFactory.CreateLogger(
+                "CreateFollowUpHandler"
+            );
+
+            logger.LogWarning(
+                ex,
+                "Failed to broadcast FollowUpChanged for FollowUp {FollowUpId}",
+                followUp.Id
+            );
+        }
 
         var response = new FollowUpResponse(
             followUp.Id,
@@ -48,6 +75,7 @@ public static class CreateFollowUpHandler
 
         return Results.Created(
             $"/api/followups/{followUp.Id}",
-            response);
+            response
+        );
     }
 }

@@ -33,6 +33,122 @@
         }
       </div>
     </div>
+
+    
+    <div class="relative">
+
+      <!-- Notification bell -->
+      <button
+        type="button"
+        (click)="toggleNotifications()"
+        class="relative flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+        aria-label="Notifications"
+        [attr.aria-expanded]="notificationsOpen()"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="21"
+          height="21"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/>
+          <path d="M10 21h4"/>
+        </svg>
+
+        @if (notificationService.unreadCount() > 0) {
+          <span
+            class="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-semibold text-white"
+          >
+            {{ notificationService.unreadCount() > 99
+              ? '99+'
+              : notificationService.unreadCount() }}
+          </span>
+        }
+      </button>
+
+      <!-- Notification dropdown -->
+      @if (notificationsOpen()) {
+        <div
+          class="absolute right-0 top-12 z-50 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+        >
+
+          <div class="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+            <h3 class="text-sm font-semibold text-slate-900">
+              Notifications
+            </h3>
+
+            <button
+              type="button"
+              (click)="markAllNotificationsRead()"
+              class="text-xs font-medium text-blue-600 hover:underline"
+            >
+              Mark all as read
+            </button>
+          </div>
+
+          <div class="max-h-96 overflow-y-auto">
+
+            @for (
+              notification of notificationService.notifications();
+              track notification.id
+            ) {
+              <button
+                type="button"
+                (click)="openNotification(notification.id)"
+                class="flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50"
+                [class.bg-blue-50]="!notification.isRead"
+              >
+                <span
+                  class="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                  [class.bg-blue-600]="!notification.isRead"
+                  [class.bg-transparent]="notification.isRead"
+                ></span>
+
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-medium text-slate-900">
+                    {{ notification.title }}
+                  </span>
+
+                  <span class="mt-1 block text-xs text-slate-600">
+                    {{ notification.message }}
+                  </span>
+
+                  <span class="mt-1 block text-xs text-slate-400">
+                    {{ notification.createdAt | date:'shortTime' }}
+                  </span>
+                </span>
+              </button>
+            } @empty {
+              <div class="px-4 py-10 text-center">
+                <p class="text-sm text-slate-500">
+                  No notifications yet.
+                </p>
+              </div>
+            }
+
+          </div>
+
+          <div class="flex justify-end border-t border-slate-100 px-4 py-2">
+            <button
+              type="button"
+              (click)="closeNotifications()"
+              class="text-xs font-medium text-slate-600 hover:text-slate-900"
+            >
+              Close
+            </button>
+          </div>
+
+        </div>
+      }
+
+    </div>
+
   </div>
+  
 
 </header>

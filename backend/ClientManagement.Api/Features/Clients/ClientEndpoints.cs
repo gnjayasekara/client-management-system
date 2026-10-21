@@ -3,6 +3,7 @@ using ClientManagement.Api.Features.Clients.Commands;
 using ClientManagement.Api.Features.Clients.DTOs;
 using ClientManagement.Api.Features.Clients.Queries;
 using ClientManagement.Api.Infrastructure.Data;
+using ClientManagement.Api.Infrastructure.Realtime;
 using FluentValidation;
 
 namespace ClientManagement.Api.Features.Clients;
@@ -23,10 +24,12 @@ public static class ClientEndpoints
             GetClientByIdHandler.HandleAsync
         );
 
+        
         group.MapPost("/", async (
             CreateClientRequest request,
             IValidator<CreateClientRequest> validator,
             AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(request, ct);
@@ -35,14 +38,20 @@ public static class ClientEndpoints
                 return Results.ValidationProblem(result.ToDictionary());
 
             return await CreateClientHandler.HandleAsync(
-                request, db, ct);
+                request,
+                db,
+                realtimeNotifier,
+                ct
+            );
         });
+
 
         group.MapPut("/{id:int}", async (
             int id,
             UpdateClientRequest request,
             IValidator<UpdateClientRequest> validator,
             AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(request, ct);
@@ -51,7 +60,7 @@ public static class ClientEndpoints
                 return Results.ValidationProblem(result.ToDictionary());
 
             return await UpdateClientHandler.HandleAsync(
-                id, request, db, ct);
+                id, request, db, realtimeNotifier, ct);
         });
 
         group.MapDelete(

@@ -2,6 +2,7 @@
 using ClientManagement.Api.Features.FollowUps.DTOs;
 using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using ClientManagement.Api.Infrastructure.Realtime;
 
 namespace ClientManagement.Api.Features.FollowUps.Commands;
 
@@ -11,6 +12,7 @@ public static class UpdateFollowUpHandler
         int id,
         UpdateFollowUpRequest request,
         AppDbContext db,
+        IRealtimeNotifier realtimeNotifier,
         CancellationToken ct)
     {
         var followUp = await db.FollowUps
@@ -34,6 +36,12 @@ public static class UpdateFollowUpHandler
         followUp.IsCompleted = request.IsCompleted;
 
         await db.SaveChangesAsync(ct);
+
+        await realtimeNotifier.FollowUpChangedAsync(
+            followUp.Id,
+            "Updated",
+            ct
+        );
 
         return Results.NoContent();
     }

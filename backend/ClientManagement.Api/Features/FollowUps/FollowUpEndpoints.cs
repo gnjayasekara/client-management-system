@@ -5,9 +5,11 @@ using ClientManagement.Api.Features.FollowUps.Queries;
 using ClientManagement.Api.Infrastructure.Data;
 using FluentValidation;
 
+
 namespace ClientManagement.Api.Features.FollowUps;
 
 using ClientManagement.Api.Infrastructure.Identity;
+using ClientManagement.Api.Infrastructure.Realtime;
 
 public static class FollowUpEndpoints
 {
@@ -31,6 +33,8 @@ public static class FollowUpEndpoints
             CreateFollowUpRequest request,
             IValidator<CreateFollowUpRequest> validator,
             AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(
@@ -41,7 +45,7 @@ public static class FollowUpEndpoints
                     result.ToDictionary());
 
             return await CreateFollowUpHandler.HandleAsync(
-                request, db, ct);
+                request, db, realtimeNotifier, loggerFactory, ct);
         });
 
         // Update
@@ -50,6 +54,7 @@ public static class FollowUpEndpoints
             UpdateFollowUpRequest request,
             IValidator<UpdateFollowUpRequest> validator,
             AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(
@@ -60,7 +65,7 @@ public static class FollowUpEndpoints
                     result.ToDictionary());
 
             return await UpdateFollowUpHandler.HandleAsync(
-                id, request, db, ct);
+                id, request, db, realtimeNotifier, ct);
         });
 
         // Mark completed
