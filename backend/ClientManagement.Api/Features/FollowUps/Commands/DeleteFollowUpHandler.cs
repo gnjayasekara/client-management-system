@@ -11,6 +11,7 @@ public static class DeleteFollowUpHandler
         int id,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var followUp = await db.FollowUps
@@ -27,7 +28,26 @@ public static class DeleteFollowUpHandler
             followUp.Id,
             "Deleted",
             ct
-        );
+        );try
+        {
+            await realtimeNotifier.FollowUpChangedAsync(
+                followUp.Id,
+                "Deleted",
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            var logger = loggerFactory.CreateLogger(
+                "DeleteFollowUpHandler"
+            );
+
+            logger.LogWarning(
+                ex,
+                "Failed to broadcast FollowUpChanged for FollowUp {FollowUpId}",
+                followUp.Id
+            );
+        }
 
         return Results.NoContent();
     }

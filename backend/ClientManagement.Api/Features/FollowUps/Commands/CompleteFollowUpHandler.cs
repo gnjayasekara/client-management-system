@@ -11,6 +11,7 @@ public static class CompleteFollowUpHandler
         int id,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
         var followUp = await db.FollowUps
@@ -23,11 +24,26 @@ public static class CompleteFollowUpHandler
 
         await db.SaveChangesAsync(ct);
 
-        await realtimeNotifier.FollowUpChangedAsync(
-            followUp.Id,
-            "Completed",
-            ct
-        );
+        try
+        {
+            await realtimeNotifier.FollowUpChangedAsync(
+                followUp.Id,
+                "Completed",
+                ct
+            );
+        }
+        catch (Exception ex)
+        {
+            var logger = loggerFactory.CreateLogger(
+                "CompleteFollowUpHandler"
+            );
+
+            logger.LogWarning(
+                ex,
+                "Failed to broadcast FollowUpChanged for FollowUp {FollowUpId}",
+                followUp.Id
+            );
+        }
 
         return Results.NoContent();
     }
