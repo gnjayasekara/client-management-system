@@ -1,0 +1,76 @@
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cms-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD}"
+    ports:
+      - "127.0.0.1:1434:1433"
+    volumes:
+      - cms_sql_data:/var/opt/mssql
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend/ClientManagement.Api
+      dockerfile: Dockerfile
+    image: clientmanagement-api:1.0
+    container_name: cms-api
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://+:8080"
+
+      ConnectionStrings__DefaultConnection: "Server=db,1433;Database=ClientManagementDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};Encrypt=True;TrustServerCertificate=True;"
+
+      Jwt__Key: "${JWT_KEY}"
+      Jwt__Issuer: "ClientManagement.Api"
+      Jwt__Audience: "ClientManagement.Frontend"
+      Jwt__ExpiryMinutes: "60"
+
+      SeedAdmin__Username: "${SEED_ADMIN_USERNAME}"
+      SeedAdmin__Email: "${SEED_ADMIN_EMAIL}"
+      SeedAdmin__Password: "${SEED_ADMIN_PASSWORD}"
+
+      EmailSettings__Host: "smtp.gmail.com"
+      EmailSettings__Port: "587"
+      EmailSettings__SenderName: "Client Management System"
+      EmailSettings__FrontendBaseUrl: "http://localhost:8081"
+      EmailSettings__SenderEmail: "${SMTP_EMAIL}"
+      EmailSettings__Username: "${SMTP_EMAIL}"
+      EmailSettings__Password: "${SMTP_PASSWORD}"
+
+      
+
+    depends_on:
+      db:
+        condition: service_started
+
+    volumes:
+      - cms_dataprotection_keys:/home/app/.aspnet/DataProtection-Keys
+
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    image: clientmanagement-frontend:1.0
+    container_name: cms-frontend
+
+    ports:
+      - "127.0.0.1:8081:80"
+
+    depends_on:
+      - api
+
+    restart: unless-stopped
+
+volumes:
+  cms_sql_data:
+  cms_dataprotection_keys:
