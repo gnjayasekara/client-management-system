@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test --watch=false",
+    "test:watch": "ng test",
+    "test:coverage": "ng test --watch=false --coverage"
   },
   "private": true,
   "packageManager": "npm@11.19.0",

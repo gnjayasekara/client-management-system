@@ -1,7 +1,7 @@
 
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 
 import { AuthService } from '../../../core/services/auth.service';
@@ -9,7 +9,10 @@ import { LoginRequest } from '../../../core/models/auth.model';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [
+    FormsModule,
+    RouterLink
+  ],
   templateUrl: './login.html',
   styleUrl: './login.css'
 })

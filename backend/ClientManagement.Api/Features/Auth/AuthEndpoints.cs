@@ -454,37 +454,83 @@ public static class AuthEndpoints
 
 
         // 2. Forgot Password (Generates standard Identity PasswordResetToken)
+        
         group.MapPost("/forgot-password", async (
             ForgotPasswordRequest request,
             UserManager<AppUser> userManager,
-            ILoggerFactory loggerFactory) =>
+            IEmailService emailService,
+            IConfiguration configuration,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
         {
-            var logger = loggerFactory.CreateLogger("AuthEndpoints");
-
             if (string.IsNullOrWhiteSpace(request.Email))
             {
-                return Results.BadRequest(new { message = "Email is required." });
+                return Results.BadRequest(new
+                {
+                    message = "Email is required."
+                });
             }
 
-            var user = await userManager.FindByEmailAsync(request.Email);
+            const string genericMessage =
+                "If an account exists with this email address, " +
+                "a password reset link will be sent.";
+
+            var user = await userManager.FindByEmailAsync(
+                request.Email.Trim());
+
             if (user is null)
             {
-                // Return Ok to avoid leaking whether user exists
-                return Results.Ok(new { message = "If the email is registered, a password reset token has been generated." });
+                return Results.Ok(new
+                {
+                    message = genericMessage
+                });
             }
 
-            var resetToken = await userManager.GeneratePasswordResetTokenAsync(user);
+            var resetToken =
+                await userManager.GeneratePasswordResetTokenAsync(user);
 
-            // In production, send via email provider. In development, log the token.
-            logger.LogInformation("Password reset token for user {UserId}: {Token}", user.Id, resetToken);
+            var encodedToken = WebEncoders.Base64UrlEncode(
+                Encoding.UTF8.GetBytes(resetToken));
+
+            var frontendBaseUrl =
+                configuration["EmailSettings:FrontendBaseUrl"]
+                ?? throw new InvalidOperationException(
+                    "Frontend URL is not configured.");
+
+            var resetUrl =
+                $"{frontendBaseUrl.TrimEnd('/')}/reset-password" +
+                $"?userId={Uri.EscapeDataString(user.Id)}" +
+                $"&token={encodedToken}";
+
+            try
+            {
+                await emailService.SendPasswordResetEmailAsync(
+                    user.Email!,
+                    resetUrl,
+                    ct);
+            }
+            catch (OperationCanceledException)
+                when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                var logger = loggerFactory.CreateLogger(
+                    "AuthEndpoints");
+
+                // Never log reset tokens or reset URLs.
+                logger.LogError(
+                    ex,
+                    "Password reset email delivery failed.");
+            }
 
             return Results.Ok(new
             {
-                message = "If the email is registered, a password reset token has been generated.",
-                userId = user.Id,
-                token = resetToken // provided for development testing
+                message = genericMessage
             });
         });
+
 
         // 3. Reset Password (Validates standard Identity PasswordResetToken)
         

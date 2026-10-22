@@ -7,4 +7,9 @@ public interface IEmailService
         string recipientEmail,
         string verificationUrl,
         CancellationToken ct = default);
+
+    Task SendPasswordResetEmailAsync(
+        string recipientEmail,
+        string resetUrl,
+        CancellationToken ct = default);
 }

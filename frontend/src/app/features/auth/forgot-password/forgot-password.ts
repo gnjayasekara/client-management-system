@@ -23,6 +23,8 @@ export class ForgotPassword {
     email: ['', [Validators.required, Validators.email]]
   });
 
+  
+
   submit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -43,5 +45,11 @@ export class ForgotPassword {
             'Unable to process your request. Please try again.';
         }
       });
+  }
+
+  tryAgain(): void {
+    this.submitted = false;
+    this.errorMessage = '';
+    this.form.reset();
   }
 }

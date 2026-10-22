@@ -2,6 +2,7 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using MimeKit;
+using System.Net;
 
 namespace ClientManagement.Api.Features.Auth.Services;
 
@@ -14,10 +15,95 @@ public sealed class SmtpEmailService : IEmailService
         _configuration = configuration;
     }
 
-    public async Task SendVerificationEmailAsync(
+    public Task SendVerificationEmailAsync(
         string recipientEmail,
         string verificationUrl,
         CancellationToken ct = default)
+    {
+        var safeUrl = WebUtility.HtmlEncode(verificationUrl);
+
+        var htmlBody = $"""
+            <h2>Welcome to Client Management System</h2>
+
+            <p>Your account has been created.</p>
+
+            <p>Please verify your email address before logging in.</p>
+
+            <p>
+                <a href="{safeUrl}">
+                    Verify Email Address
+                </a>
+            </p>
+
+            <p>If you did not expect this email, you can ignore it.</p>
+            """;
+
+        var textBody =
+            "Your account has been created.\n\n" +
+            "Verify your email address using this link:\n" +
+            verificationUrl;
+
+        return SendEmailAsync(
+            recipientEmail,
+            "Verify your email address",
+            htmlBody,
+            textBody,
+            ct);
+    }
+
+    public Task SendPasswordResetEmailAsync(
+        string recipientEmail,
+        string resetUrl,
+        CancellationToken ct = default)
+    {
+        var safeUrl = WebUtility.HtmlEncode(resetUrl);
+
+        var htmlBody = $"""
+            <h2>Reset Your Password</h2>
+
+            <p>
+                We received a request to reset the password
+                for your Client Management System account.
+            </p>
+
+            <p>Click the button below to set a new password.</p>
+
+            <p>
+                <a href="{safeUrl}">
+                    Reset Password
+                </a>
+            </p>
+
+            <p>
+                If you did not request a password reset,
+                you can safely ignore this email.
+            </p>
+
+            <p>
+                For security, do not share this link with anyone.
+            </p>
+            """;
+
+        var textBody =
+            "We received a request to reset your password.\n\n" +
+            "Use the following link:\n" +
+            resetUrl +
+            "\n\nIf you did not request this, ignore this email.";
+
+        return SendEmailAsync(
+            recipientEmail,
+            "Reset your Client Management System password",
+            htmlBody,
+            textBody,
+            ct);
+    }
+
+    private async Task SendEmailAsync(
+        string recipientEmail,
+        string subject,
+        string htmlBody,
+        string textBody,
+        CancellationToken ct)
     {
         var host = _configuration["EmailSettings:Host"]
             ?? throw new InvalidOperationException(
@@ -53,41 +139,13 @@ public sealed class SmtpEmailService : IEmailService
         message.To.Add(
             MailboxAddress.Parse(recipientEmail));
 
-        message.Subject = "Verify your email address";
+        message.Subject = subject;
 
-        var safeUrl = System.Net.WebUtility.HtmlEncode(
-            verificationUrl);
-
-        var body = new BodyBuilder
+        message.Body = new BodyBuilder
         {
-            HtmlBody = $"""
-                <h2>Welcome to Client Management System</h2>
-
-                <p>Your account has been created.</p>
-
-                <p>
-                    Please verify your email address
-                    before logging in.
-                </p>
-
-                <p>
-                    <a href="{safeUrl}">
-                        Verify Email Address
-                    </a>
-                </p>
-
-                <p>
-                    If you did not expect this email,
-                    you can ignore it.
-                </p>
-                """,
-            TextBody =
-                "Your account has been created.\n\n" +
-                "Verify your email address using this link:\n" +
-                verificationUrl
-        };
-
-        message.Body = body.ToMessageBody();
+            HtmlBody = htmlBody,
+            TextBody = textBody
+        }.ToMessageBody();
 
         using var smtp = new SmtpClient();
 
