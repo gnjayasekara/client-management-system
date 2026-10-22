@@ -68,3 +68,62 @@ jobs:
         run: npm test
         env:
           CI: 'true'
+
+  
+  integration-tests:
+    name: SQL Server Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_SQL_PASSWORD }}
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+
+    env:
+      CLIENTMANAGEMENT_TEST_CONNECTION: "Server=127.0.0.1,1433;Database=ClientManagementDb_Test;User Id=sa;Password=${{ secrets.CI_SQL_PASSWORD }};Encrypt=True;TrustServerCertificate=True;"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Wait for SQL Server
+        shell: bash
+        env:
+          SQL_PASSWORD: ${{ secrets.CI_SQL_PASSWORD }}
+        run: |
+          for attempt in {1..60}; do
+            if docker exec \
+              -e SQLCMDPASSWORD="$SQL_PASSWORD" \
+              "${{ job.services.sqlserver.id }}" \
+              /opt/mssql-tools18/bin/sqlcmd \
+              -S localhost -U sa -C \
+              -Q "SELECT 1" >/dev/null 2>&1; then
+              echo "SQL Server is ready."
+              exit 0
+            fi
+
+            echo "Waiting for SQL Server ($attempt/60)..."
+            sleep 2
+          done
+
+          echo "SQL Server failed to become ready."
+          exit 1
+
+      - name: Run integration tests
+        run: |
+          dotnet test \
+            backend/tests/ClientManagement.IntegrationTests/ClientManagement.IntegrationTests.csproj \
+            --configuration Release \
+            --verbosity normal
+
