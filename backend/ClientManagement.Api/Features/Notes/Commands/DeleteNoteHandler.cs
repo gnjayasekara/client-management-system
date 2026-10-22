@@ -24,7 +24,7 @@ public static class DeleteNoteHandler
         await db.SaveChangesAsync(ct);
 
         await realtimeNotifier.NoteChangedAsync(
-            note.Id,
+            note.ClientId,
             "Deleted",
             ct
         );

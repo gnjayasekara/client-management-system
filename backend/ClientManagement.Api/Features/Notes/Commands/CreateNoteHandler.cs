@@ -44,7 +44,7 @@ public static class CreateNoteHandler
         try
         {
             await realtimeNotifier.NoteChangedAsync(
-                note.Id,
+                note.ClientId,
                 "Created",
                 ct
             );
