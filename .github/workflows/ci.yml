@@ -15,26 +15,32 @@ permissions:
 
 jobs:
   backend:
-    name: Build ASP.NET Core API
+    name: Build and Test .NET Backend
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup .NET 10
-        uses: actions/setup-dotnet@v6
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore backend/ClientManagement.Api/ClientManagement.Api.csproj
+      - name: Restore backend dependencies
+        run: dotnet restore backend/tests/ClientManagement.UnitTests/ClientManagement.UnitTests.csproj
 
-      - name: Build backend
-        run: dotnet build backend/ClientManagement.Api/ClientManagement.Api.csproj --configuration Release --no-restore
+      - name: Build ASP.NET Core API
+        run: dotnet build backend/ClientManagement.Api/ClientManagement.Api.csproj --configuration Release
+
+      - name: Run .NET unit tests
+        run: |
+          dotnet test backend/tests/ClientManagement.UnitTests/ClientManagement.UnitTests.csproj \
+            --configuration Release \
+            --verbosity normal
 
   frontend:
-    name: Build Angular frontend
+    name: Build and Test Angular Frontend
     runs-on: ubuntu-latest
 
     defaults:
@@ -43,7 +49,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -57,3 +63,8 @@ jobs:
 
       - name: Build Angular
         run: npm run build -- --configuration production
+
+      - name: Run Angular tests
+        run: npm test
+        env:
+          CI: 'true'
