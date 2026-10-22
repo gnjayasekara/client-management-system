@@ -55,6 +55,7 @@ public static class FollowUpEndpoints
             IValidator<UpdateFollowUpRequest> validator,
             AppDbContext db,
             IRealtimeNotifier realtimeNotifier,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(
@@ -65,7 +66,7 @@ public static class FollowUpEndpoints
                     result.ToDictionary());
 
             return await UpdateFollowUpHandler.HandleAsync(
-                id, request, db, realtimeNotifier, ct);
+                id, request, db, realtimeNotifier, loggerFactory, ct);
         });
 
         // Mark completed
