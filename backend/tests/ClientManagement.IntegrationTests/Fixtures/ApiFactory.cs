@@ -8,6 +8,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
+using ClientManagement.Api.Features.Auth.Services;
+using NSubstitute;
+
 namespace ClientManagement.IntegrationTests.Fixtures;
 
 public class ApiFactory : WebApplicationFactory<Program>
@@ -46,7 +49,15 @@ public class ApiFactory : WebApplicationFactory<Program>
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
+
+            services.RemoveAll<IEmailService>();
+
+            services.AddSingleton(
+                Substitute.For<IEmailService>()
+);
         });
+
+        
     }
 
     public ApiFactory()
@@ -65,5 +76,9 @@ public class ApiFactory : WebApplicationFactory<Program>
 
         Environment.SetEnvironmentVariable(
             "Jwt__ExpiryMinutes", "60");
+
+        Environment.SetEnvironmentVariable(
+            "EmailSettings__FrontendBaseUrl",
+            "http://localhost:4200");
     }
 }
