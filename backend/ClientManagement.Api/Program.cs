@@ -57,6 +57,11 @@ builder.Services.AddOpenApi(options =>
             // Apply Bearer authentication to API operations
             foreach (var path in document.Paths.Values)
             {
+                if (path.Operations is null)
+                {
+                    continue;
+                }
+
                 foreach (var operation in path.Operations.Values)
                 {
                     operation.Security ??=
@@ -355,3 +360,6 @@ app.MapHub<NotificationHub>("/hubs/notifications")
 
 
 app.Run();
+
+
+public partial class Program { }
