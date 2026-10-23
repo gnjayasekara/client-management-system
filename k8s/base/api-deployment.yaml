@@ -1,0 +1,74 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms-api
+  namespace: client-management
+  labels:
+    app: cms-api
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: cms-api
+
+  template:
+    metadata:
+      labels:
+        app: cms-api
+
+    spec:
+
+      securityContext:
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+        fsGroupChangePolicy: OnRootMismatch
+
+      containers:
+        - name: cms-api
+          image: ghcr.io/gnjayasekara/clientmanagement-api:287ea8b48f4add8cf3e81b011d1acecb591f22ed
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 8080
+              name: http
+
+          envFrom:
+            - configMapRef:
+                name: cms-api-config
+
+            - secretRef:
+                name: cms-api-secrets
+
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 5
+            failureThreshold: 24
+
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            periodSeconds: 20
+
+          volumeMounts:
+            - name: dataprotection-keys
+              mountPath: /home/app/.aspnet/DataProtection-Keys
+      
+
+
+      volumes:
+        - name: dataprotection-keys
+          persistentVolumeClaim:
+            claimName: cms-dataprotection-pvc
