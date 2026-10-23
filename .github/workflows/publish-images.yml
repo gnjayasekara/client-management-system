@@ -44,7 +44,7 @@ jobs:
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: ./backend/ClientManagement.Api
           file: ./backend/ClientManagement.Api/Dockerfile
           push: true
           tags: |
