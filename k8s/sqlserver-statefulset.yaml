@@ -1,0 +1,76 @@
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cms-sqlserver
+  namespace: client-management
+
+spec:
+  serviceName: cms-sqlserver-headless
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: cms-sqlserver
+
+  template:
+    metadata:
+      labels:
+        app: cms-sqlserver
+
+    spec:
+      securityContext:
+        fsGroup: 10001
+
+      containers:
+        - name: sqlserver
+          image: mcr.microsoft.com/mssql/server:2022-latest
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 1433
+              name: sql
+
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+
+            - name: MSSQL_PID
+              value: "Developer"
+
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cms-sqlserver-secret
+                  key: MSSQL_SA_PASSWORD
+
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "500m"
+            limits:
+              memory: "3Gi"
+              cpu: "2000m"
+
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 12
+
+          volumeMounts:
+            - name: sql-data
+              mountPath: /var/opt/mssql
+
+  volumeClaimTemplates:
+    - metadata:
+        name: sql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+
+        resources:
+          requests:
+            storage: 8Gi
+
