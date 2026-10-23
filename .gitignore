@@ -151,3 +151,6 @@ uploads/
 storage/uploads/
 
 SQL querries/
+
+database-backups/
+*.bak
