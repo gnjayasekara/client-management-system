@@ -1,6 +1,8 @@
 
 using ClientManagement.Api.Features.FollowUps.DTOs;
+using ClientManagement.Api.Features.FollowUps.Events;
 using ClientManagement.Api.Infrastructure.Data;
+using ClientManagement.Api.Infrastructure.Messaging;
 using ClientManagement.Api.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,9 +14,13 @@ public static class CreateFollowUpHandler
         CreateFollowUpRequest request,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        IFollowUpEventPublisher eventPublisher,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger(
+            "CreateFollowUpHandler");
+
         // Find the client and retrieve its name
         var clientName = await db.Clients
             .Where(x => x.Id == request.ClientId)
@@ -39,10 +45,10 @@ public static class CreateFollowUpHandler
 
         db.FollowUps.Add(followUp);
 
-        // Save the follow-up before broadcasting
+        // Save to SQL Server first
         await db.SaveChangesAsync(ct);
 
-        // Notify other connected users
+        // Existing SignalR functionality
         try
         {
             await realtimeNotifier.FollowUpChangedAsync(
@@ -53,13 +59,39 @@ public static class CreateFollowUpHandler
         }
         catch (Exception ex)
         {
-            var logger = loggerFactory.CreateLogger(
-                "CreateFollowUpHandler"
-            );
-
             logger.LogWarning(
                 ex,
                 "Failed to broadcast FollowUpChanged for FollowUp {FollowUpId}",
+                followUp.Id
+            );
+        }
+
+        // New RabbitMQ event publishing
+        var followUpCreatedEvent = new FollowUpCreatedEvent(
+            Guid.NewGuid(),
+            followUp.Id,
+            followUp.ClientId,
+            DateTime.UtcNow
+        );
+
+        try
+        {
+            await eventPublisher.PublishCreatedAsync(
+                followUpCreatedEvent,
+                ct
+            );
+
+            logger.LogInformation(
+                "Published FollowUpCreated event {EventId} for FollowUp {FollowUpId}",
+                followUpCreatedEvent.EventId,
+                followUp.Id
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "RabbitMQ publishing failed for FollowUp {FollowUpId}",
                 followUp.Id
             );
         }

@@ -26,10 +26,40 @@ using System.Security.Claims;
 
 using ClientManagement.Api.Infrastructure.Realtime;
 
+using ClientManagement.Api.Infrastructure.Messaging;
+
+using Microsoft.Extensions.Caching.Distributed;
+
+using Serilog;
+
+using ClientManagement.Api.Infrastructure.Caching;
+
+
+
 
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSerilog((services, logger) =>
+    {
+        logger
+            .MinimumLevel.Information()
+            .MinimumLevel.Override(
+                "Microsoft.AspNetCore",
+                Serilog.Events.LogEventLevel.Warning)
+            .Enrich.FromLogContext()
+            .WriteTo.Console()
+            .WriteTo.Seq(
+                builder.Configuration["Seq:ServerUrl"]
+                ?? "http://localhost:5341"
+            );
+    });
+}
+
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -83,11 +113,22 @@ builder.Services.AddOpenApi(options =>
 });
 
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+
+builder.Services.AddScoped<
+    DashboardCacheInvalidationInterceptor>();
+
+builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+{
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("DefaultConnection")
-    )
-);
+    );
+
+    options.AddInterceptors(
+        serviceProvider.GetRequiredService<
+            DashboardCacheInvalidationInterceptor>()
+    );
+});
+
 
 builder.Services.AddDataProtection();
 
@@ -206,7 +247,47 @@ builder.Services.AddScoped<
     IRealtimeNotifier,
     SignalRRealtimeNotifier>();
 
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddScoped<
+        IFollowUpEventPublisher,
+        NoOpFollowUpEventPublisher>();
+}
+else
+{
+    builder.Services.AddScoped<
+        IFollowUpEventPublisher,
+        RabbitMqFollowUpEventPublisher>();
+}
+
+if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled") &&
+    !builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddHostedService<FollowUpCreatedConsumer>();
+}
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration =
+            builder.Configuration["Redis:ConnectionString"]
+            ?? "localhost:6379";
+
+        options.InstanceName = "cms:";
+    });
+}
+else
+{
+    builder.Services.AddDistributedMemoryCache();
+}
+
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "Client Management API started. Logging integration: {Provider}",
+    "Seq"
+);
 
 
 
@@ -344,6 +425,52 @@ app.MapGet("/api/health", () =>
         status = "Healthy",
         application = "Client Management API"
     }));
+
+
+app.MapGet("/api/demo/cache", async (
+    IDistributedCache cache,
+    AppDbContext db,
+    ILogger<Program> logger,
+    CancellationToken ct) =>
+{
+    const string key = "demo:client-count";
+
+    var cachedValue = await cache.GetStringAsync(key, ct);
+
+    if (cachedValue is not null)
+    {
+        logger.LogInformation(
+            "Redis cache HIT for {CacheKey}", key);
+
+        return Results.Ok(new
+        {
+            source = "redis",
+            clientCount = int.Parse(cachedValue)
+        });
+    }
+
+    var clientCount = await db.Clients.CountAsync(ct);
+
+    await cache.SetStringAsync(
+        key,
+        clientCount.ToString(),
+        new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow =
+                TimeSpan.FromMinutes(5)
+        },
+        ct);
+
+    logger.LogInformation(
+        "Redis cache MISS for {CacheKey}", key);
+
+    return Results.Ok(new
+    {
+        source = "database",
+        clientCount
+    });
+}).RequireAuthorization();
+
 
 app.MapAuthEndpoints();
 
