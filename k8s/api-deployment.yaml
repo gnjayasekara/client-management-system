@@ -26,10 +26,10 @@ spec:
         runAsGroup: 1654
         fsGroup: 1654
         fsGroupChangePolicy: OnRootMismatch
-        
+
       containers:
         - name: cms-api
-          image: clientmanagement-api:1.0
+          image: ghcr.io/gnjayasekara/clientmanagement-api:287ea8b48f4add8cf3e81b011d1acecb591f22ed
           imagePullPolicy: IfNotPresent
 
           ports:

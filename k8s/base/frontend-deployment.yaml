@@ -1,0 +1,59 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms-frontend
+  namespace: client-management
+  labels:
+    app: cms-frontend
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: cms-frontend
+
+  template:
+    metadata:
+      labels:
+        app: cms-frontend
+
+    spec:
+      containers:
+        - name: cms-frontend
+          image: ghcr.io/gnjayasekara/clientmanagement-frontend:287ea8b48f4add8cf3e81b011d1acecb591f22ed
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - containerPort: 80
+              name: http
+
+          startupProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 5
+            failureThreshold: 24
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            periodSeconds: 20
+
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+      
+      

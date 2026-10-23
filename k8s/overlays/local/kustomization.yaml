@@ -1,0 +1,15 @@
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: client-management
+
+resources:
+  - ../../base
+
+images:
+  - name: ghcr.io/gnjayasekara/clientmanagement-api
+    newTag: 287ea8b48f4add8cf3e81b011d1acecb591f22ed
+
+  - name: ghcr.io/gnjayasekara/clientmanagement-frontend
+    newTag: 287ea8b48f4add8cf3e81b011d1acecb591f22ed

@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: cms-frontend
-          image: clientmanagement-frontend:k8s
+          image: ghcr.io/gnjayasekara/clientmanagement-frontend:287ea8b48f4add8cf3e81b011d1acecb591f22ed
           imagePullPolicy: IfNotPresent
 
           ports:
