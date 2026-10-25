@@ -15,3 +15,10 @@ data:
   EmailSettings__Host: "smtp.gmail.com"
   EmailSettings__Port: "587"
   EmailSettings__FrontendBaseUrl: "http://localhost:8082"
+
+  RabbitMq__Enabled: "true"
+  RabbitMq__HostName: "cms-rabbitmq"
+  RabbitMq__Port: "5672"
+  RabbitMq__UserName: "cmsapp"
+
+  Redis__ConnectionString: "cms-redis:6379"
