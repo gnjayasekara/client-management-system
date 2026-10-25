@@ -247,24 +247,26 @@ builder.Services.AddScoped<
     IRealtimeNotifier,
     SignalRRealtimeNotifier>();
 
-if (builder.Environment.IsEnvironment("Testing"))
+
+var rabbitMqEnabled =
+    builder.Configuration.GetValue<bool>("RabbitMq:Enabled")
+    && !builder.Environment.IsEnvironment("Testing");
+
+if (rabbitMqEnabled)
 {
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
-        NoOpFollowUpEventPublisher>();
+        RabbitMqFollowUpEventPublisher>();
+
+    builder.Services.AddHostedService<FollowUpCreatedConsumer>();
 }
 else
 {
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
-        RabbitMqFollowUpEventPublisher>();
+        NoOpFollowUpEventPublisher>();
 }
 
-if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled") &&
-    !builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddHostedService<FollowUpCreatedConsumer>();
-}
 
 if (builder.Environment.IsDevelopment())
 {

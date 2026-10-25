@@ -26,8 +26,7 @@ public sealed class DashboardCacheInvalidationInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        // Determine whether the pending database changes
-        // can affect the dashboard response.
+        
         eventData.Context?.ChangeTracker.DetectChanges();
 
         _shouldInvalidate =

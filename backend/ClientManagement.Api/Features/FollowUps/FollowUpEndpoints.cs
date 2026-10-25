@@ -21,7 +21,7 @@ public static class FollowUpEndpoints
             .WithTags("FollowUps")
             .RequireAuthorization();
 
-        // Read operations
+        
         group.MapGet("/", GetFollowUpsHandler.HandleAsync);
 
         group.MapGet(
@@ -29,7 +29,7 @@ public static class FollowUpEndpoints
             GetFollowUpByIdHandler.HandleAsync
         );
 
-        // Create
+        
         group.MapPost("/", async (
             CreateFollowUpRequest request,
             IValidator<CreateFollowUpRequest> validator,
@@ -50,7 +50,7 @@ public static class FollowUpEndpoints
                 request, db, realtimeNotifier, eventPublisher, loggerFactory, ct);
         });
 
-        // Update
+        
         group.MapPut("/{id:int}", async (
             int id,
             UpdateFollowUpRequest request,
@@ -71,13 +71,13 @@ public static class FollowUpEndpoints
                 id, request, db, realtimeNotifier, loggerFactory, ct);
         });
 
-        // Mark completed
+        
         group.MapPatch(
             "/{id:int}/complete",
             CompleteFollowUpHandler.HandleAsync
         );
 
-        // Delete
+        
        group.MapDelete(
             "/{id:int}",
             DeleteFollowUpHandler.HandleAsync
