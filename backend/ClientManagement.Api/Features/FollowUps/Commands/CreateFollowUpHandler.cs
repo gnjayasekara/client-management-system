@@ -2,7 +2,7 @@
 using ClientManagement.Api.Features.FollowUps.DTOs;
 using ClientManagement.Api.Features.FollowUps.Events;
 using ClientManagement.Api.Infrastructure.Data;
-using ClientManagement.Api.Infrastructure.Messaging;
+using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 using ClientManagement.Api.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 

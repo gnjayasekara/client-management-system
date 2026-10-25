@@ -26,7 +26,9 @@ using System.Security.Claims;
 
 using ClientManagement.Api.Infrastructure.Realtime;
 
-using ClientManagement.Api.Infrastructure.Messaging;
+using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
+
+using ClientManagement.Api.Infrastructure.Messaging.Notes;
 
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -259,13 +261,24 @@ if (rabbitMqEnabled)
         RabbitMqFollowUpEventPublisher>();
 
     builder.Services.AddHostedService<FollowUpCreatedConsumer>();
+
+    builder.Services.AddScoped<
+        INoteEventPublisher,
+        RabbitMqNoteEventPublisher>();
+   
+    builder.Services.AddHostedService<NoteCreatedConsumer>();
 }
 else
 {
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
         NoOpFollowUpEventPublisher>();
+
+    builder.Services.AddScoped<
+        INoteEventPublisher,
+        NoOpNoteEventPublisher>();
 }
+
 
 
 if (builder.Environment.IsDevelopment())

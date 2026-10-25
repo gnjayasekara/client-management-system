@@ -3,14 +3,16 @@ using ClientManagement.Api.Features.FollowUps.Commands;
 using ClientManagement.Api.Features.FollowUps.DTOs;
 using ClientManagement.Api.Features.FollowUps.Queries;
 using ClientManagement.Api.Infrastructure.Data;
-using ClientManagement.Api.Infrastructure.Messaging;
+using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 using FluentValidation;
+
+using ClientManagement.Api.Infrastructure.Identity;
+using ClientManagement.Api.Infrastructure.Realtime;
 
 
 namespace ClientManagement.Api.Features.FollowUps;
 
-using ClientManagement.Api.Infrastructure.Identity;
-using ClientManagement.Api.Infrastructure.Realtime;
+
 
 public static class FollowUpEndpoints
 {

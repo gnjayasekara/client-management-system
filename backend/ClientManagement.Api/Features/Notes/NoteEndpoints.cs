@@ -5,6 +5,9 @@ using ClientManagement.Api.Features.Notes.Queries;
 using ClientManagement.Api.Infrastructure.Data;
 using ClientManagement.Api.Infrastructure.Realtime;
 using FluentValidation;
+using ClientManagement.Api.Infrastructure.Messaging.Notes;
+    
+
 
 namespace ClientManagement.Api.Features.Notes;
 
@@ -32,6 +35,7 @@ public static class NoteEndpoints
             IValidator<CreateNoteRequest> validator,
             AppDbContext db,
             IRealtimeNotifier realtimeNotifier,
+            INoteEventPublisher eventPublisher,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -45,7 +49,7 @@ public static class NoteEndpoints
             }
 
             return await CreateNoteHandler.HandleAsync(
-                clientId, request, db, realtimeNotifier, loggerFactory, ct);
+                clientId, request, db, realtimeNotifier, eventPublisher, loggerFactory, ct);
         });
 
         // DELETE: Delete a note by its ID

@@ -4,7 +4,7 @@ using System.Text.Json;
 using ClientManagement.Api.Features.FollowUps.Events;
 using RabbitMQ.Client;
 
-namespace ClientManagement.Api.Infrastructure.Messaging;
+namespace ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 
 public sealed class RabbitMqFollowUpEventPublisher
     : IFollowUpEventPublisher
