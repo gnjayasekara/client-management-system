@@ -4,7 +4,7 @@ using ClientManagement.Api.Features.FollowUps.Events;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
-namespace ClientManagement.Api.Infrastructure.Messaging;
+namespace ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 
 public sealed class FollowUpCreatedConsumer : BackgroundService
 {

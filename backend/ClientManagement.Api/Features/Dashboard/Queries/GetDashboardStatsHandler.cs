@@ -21,7 +21,7 @@ public static class GetDashboardStatsHandler
 
         var key = DashboardCacheKeys.Stats;
 
-        // 1. Attempt to retrieve dashboard statistics
+        
         try
         {
             var cachedJson = await cache.GetStringAsync(key, ct);
@@ -54,7 +54,7 @@ public static class GetDashboardStatsHandler
         logger.LogInformation(
             "Dashboard Redis cache MISS");
 
-        // 2. Original database queries
+        
         var totalClients = await db.Clients.CountAsync(ct);
 
         var activeClients = await db.Clients

@@ -2,7 +2,7 @@
 using ClientManagement.Api.Features.FollowUps.DTOs;
 using ClientManagement.Api.Features.FollowUps.Events;
 using ClientManagement.Api.Infrastructure.Data;
-using ClientManagement.Api.Infrastructure.Messaging;
+using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 using ClientManagement.Api.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,10 +45,10 @@ public static class CreateFollowUpHandler
 
         db.FollowUps.Add(followUp);
 
-        // Save to SQL Server first
+        // Save to SQL 
         await db.SaveChangesAsync(ct);
 
-        // Existing SignalR functionality
+        // SignalR functionality
         try
         {
             await realtimeNotifier.FollowUpChangedAsync(
@@ -66,7 +66,7 @@ public static class CreateFollowUpHandler
             );
         }
 
-        // New RabbitMQ event publishing
+        // RabbitMQ event publishing
         var followUpCreatedEvent = new FollowUpCreatedEvent(
             Guid.NewGuid(),
             followUp.Id,

@@ -1,7 +1,7 @@
 
 using ClientManagement.Api.Features.FollowUps.Events;
 
-namespace ClientManagement.Api.Infrastructure.Messaging;
+namespace ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 
 public sealed class NoOpFollowUpEventPublisher
     : IFollowUpEventPublisher

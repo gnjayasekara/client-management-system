@@ -4,6 +4,9 @@ using ClientManagement.Api.Infrastructure.Data;
 using ClientManagement.Api.Infrastructure.Realtime;
 using Microsoft.EntityFrameworkCore;
 
+using ClientManagement.Api.Features.Notes.Events;
+using ClientManagement.Api.Infrastructure.Messaging.Notes;
+
 namespace ClientManagement.Api.Features.Notes.Commands;
 
 public static class CreateNoteHandler
@@ -13,9 +16,12 @@ public static class CreateNoteHandler
         CreateNoteRequest request,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        INoteEventPublisher eventPublisher,
         ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger("CreateNoteHandler");
+
         // Check whether the client exists
         var clientExists = await db.Clients
             .AnyAsync(x => x.Id == clientId, ct);
@@ -40,6 +46,8 @@ public static class CreateNoteHandler
         db.ClientNotes.Add(note);
         await db.SaveChangesAsync(ct);
 
+
+
         // Notify other connected users
         try
         {
@@ -51,13 +59,43 @@ public static class CreateNoteHandler
         }
         catch (Exception ex)
         {
-            var logger = loggerFactory.CreateLogger(
-                "CreateNoteHandler"
-            );
+            
 
             logger.LogWarning(
                 ex,
                 "Failed to broadcast NoteChanged for Note {NoteId}",
+                note.Id
+            );
+        }
+
+        
+
+        try
+        {
+            // RabbitMQ event publishing
+            var noteCreatedEvent = new NoteCreatedEvent(
+                Guid.NewGuid(),
+                note.Id,
+                note.ClientId,
+                DateTime.UtcNow
+            );
+
+            await eventPublisher.PublishCreatedAsync(
+                noteCreatedEvent,
+                ct
+            );
+
+            logger.LogInformation(
+                "Published NoteCreated event {EventId} for Note {NoteId}",
+                noteCreatedEvent.EventId,
+                note.Id
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "RabbitMQ publishing failed for Note {NoteId}",
                 note.Id
             );
         }

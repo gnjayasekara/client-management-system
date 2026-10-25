@@ -26,7 +26,9 @@ using System.Security.Claims;
 
 using ClientManagement.Api.Infrastructure.Realtime;
 
-using ClientManagement.Api.Infrastructure.Messaging;
+using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
+
+using ClientManagement.Api.Infrastructure.Messaging.Notes;
 
 using Microsoft.Extensions.Caching.Distributed;
 
@@ -247,24 +249,37 @@ builder.Services.AddScoped<
     IRealtimeNotifier,
     SignalRRealtimeNotifier>();
 
-if (builder.Environment.IsEnvironment("Testing"))
+
+var rabbitMqEnabled =
+    builder.Configuration.GetValue<bool>("RabbitMq:Enabled")
+    && !builder.Environment.IsEnvironment("Testing");
+
+if (rabbitMqEnabled)
 {
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
-        NoOpFollowUpEventPublisher>();
+        RabbitMqFollowUpEventPublisher>();
+
+    builder.Services.AddHostedService<FollowUpCreatedConsumer>();
+
+    builder.Services.AddScoped<
+        INoteEventPublisher,
+        RabbitMqNoteEventPublisher>();
+   
+    builder.Services.AddHostedService<NoteCreatedConsumer>();
 }
 else
 {
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
-        RabbitMqFollowUpEventPublisher>();
+        NoOpFollowUpEventPublisher>();
+
+    builder.Services.AddScoped<
+        INoteEventPublisher,
+        NoOpNoteEventPublisher>();
 }
 
-if (builder.Configuration.GetValue<bool>("RabbitMq:Enabled") &&
-    !builder.Environment.IsEnvironment("Testing"))
-{
-    builder.Services.AddHostedService<FollowUpCreatedConsumer>();
-}
+
 
 if (builder.Environment.IsDevelopment())
 {
