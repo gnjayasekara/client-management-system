@@ -42,6 +42,13 @@ spec:
 
             - secretRef:
                 name: cms-api-secrets
+          
+          env:
+            - name: RabbitMq__Password
+              valueFrom:
+                secretKeyRef:
+                  name: cms-rabbitmq-auth
+                  key: RABBITMQ_DEFAULT_PASS
 
           startupProbe:
             httpGet:

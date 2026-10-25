@@ -6,10 +6,13 @@ namespace: client-management
 
 resources:
   - ../../base
+  - rabbitmq.yaml
+  - redis.yaml
 
 images:
   - name: ghcr.io/gnjayasekara/clientmanagement-api
-    newTag: 287ea8b48f4add8cf3e81b011d1acecb591f22ed
+    newTag: e7c572348b99b707ffb1b0be8835617dd61a1047
 
   - name: ghcr.io/gnjayasekara/clientmanagement-frontend
     newTag: 287ea8b48f4add8cf3e81b011d1acecb591f22ed
+
