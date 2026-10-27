@@ -41,25 +41,26 @@
     >
 
       <!-- Client filter -->
+      
+      <!-- Client Name filter -->
       <div class="flex-1">
         <label
-          for="clientId"
+          for="clientSearch"
           class="mb-2 block text-sm font-medium text-slate-700"
         >
-          Client ID
+          Client Name
         </label>
 
         <input
-          id="clientId"
-          name="clientId"
-          type="number"
-          min="1"
-          step="1"
-          [(ngModel)]="clientIdFilter"
-          placeholder="All clients"
-          class="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-slate-700"
+          id="clientSearch"
+          type="text"
+          name="clientSearch"
+          placeholder="Search by client name..."
+          [(ngModel)]="clientSearch"
+          class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-700"
         />
       </div>
+
 
       <!-- Completion status filter -->
       <div class="flex-1">
@@ -176,7 +177,7 @@
                 </td>
 
                 <td class="px-6 py-4 text-slate-600">
-                  Client #{{ followUp.clientId }}
+                  {{ followUp.clientName || ('Client #' + followUp.clientId) }}
                 </td>
 
                 <td class="px-6 py-4">

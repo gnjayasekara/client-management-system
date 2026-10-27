@@ -2,6 +2,7 @@
 export interface FollowUp {
   id: number;
   clientId: number;
+  clientName: string;
   title: string;
   dueDate: string;
   isCompleted: boolean;
