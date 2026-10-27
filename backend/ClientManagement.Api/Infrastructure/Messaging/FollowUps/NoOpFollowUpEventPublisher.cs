@@ -8,8 +8,17 @@ public sealed class NoOpFollowUpEventPublisher
 {
     public Task PublishCreatedAsync(
         FollowUpCreatedEvent message,
-        CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
+        CancellationToken ct) => Task.CompletedTask;
+
+    public Task PublishUpdatedAsync(
+        FollowUpUpdatedEvent message,
+        CancellationToken ct) => Task.CompletedTask;
+
+    public Task PublishCompletedAsync(
+        FollowUpCompletedEvent message,
+        CancellationToken ct) => Task.CompletedTask;
+
+    public Task PublishDeletedAsync(
+        FollowUpDeletedEvent message,
+        CancellationToken ct) => Task.CompletedTask;
 }

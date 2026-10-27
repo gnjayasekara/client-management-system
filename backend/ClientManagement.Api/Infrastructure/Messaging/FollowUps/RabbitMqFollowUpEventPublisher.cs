@@ -1,5 +1,4 @@
 
-using System.Text;
 using System.Text.Json;
 using ClientManagement.Api.Features.FollowUps.Events;
 using RabbitMQ.Client;
@@ -10,47 +9,67 @@ public sealed class RabbitMqFollowUpEventPublisher
     : IFollowUpEventPublisher
 {
     private readonly IConfiguration _configuration;
+    private readonly ILogger<RabbitMqFollowUpEventPublisher> _logger;
 
     public RabbitMqFollowUpEventPublisher(
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<RabbitMqFollowUpEventPublisher> logger)
     {
         _configuration = configuration;
+        _logger = logger;
     }
 
-    public async Task PublishCreatedAsync(
+    public Task PublishCreatedAsync(
         FollowUpCreatedEvent message,
-        CancellationToken cancellationToken)
+        CancellationToken ct) =>
+        PublishAsync(
+            "cms.followups.created", message, message.EventId, ct);
+
+    public Task PublishUpdatedAsync(
+        FollowUpUpdatedEvent message,
+        CancellationToken ct) =>
+        PublishAsync(
+            "cms.followups.updated", message, message.EventId, ct);
+
+    public Task PublishCompletedAsync(
+        FollowUpCompletedEvent message,
+        CancellationToken ct) =>
+        PublishAsync(
+            "cms.followups.completed", message, message.EventId, ct);
+
+    public Task PublishDeletedAsync(
+        FollowUpDeletedEvent message,
+        CancellationToken ct) =>
+        PublishAsync(
+            "cms.followups.deleted", message, message.EventId, ct);
+
+    private async Task PublishAsync<T>(
+        string queueName,
+        T message,
+        Guid eventId,
+        CancellationToken ct)
     {
         var factory = new ConnectionFactory
         {
             HostName = _configuration["RabbitMq:HostName"]
                 ?? "localhost",
-
-            Port = _configuration.GetValue<int?>("RabbitMq:Port")
-                ?? 5672,
-
+            Port = _configuration.GetValue<int?>(
+                "RabbitMq:Port") ?? 5672,
             UserName = _configuration["RabbitMq:UserName"]
                 ?? "guest",
-
             Password = _configuration["RabbitMq:Password"]
                 ?? "guest"
         };
 
         await using var connection =
-            await factory.CreateConnectionAsync(
-                cancellationToken);
+            await factory.CreateConnectionAsync(ct);
 
         var options = new CreateChannelOptions(
             publisherConfirmationsEnabled: true,
-            publisherConfirmationTrackingEnabled: true
-        );
+            publisherConfirmationTrackingEnabled: true);
 
         await using var channel =
-            await connection.CreateChannelAsync(
-                options,
-                cancellationToken);
-
-        const string queueName = "cms.followups.created";
+            await connection.CreateChannelAsync(options, ct);
 
         await channel.QueueDeclareAsync(
             queue: queueName,
@@ -58,27 +77,29 @@ public sealed class RabbitMqFollowUpEventPublisher
             exclusive: false,
             autoDelete: false,
             arguments: null,
-            cancellationToken: cancellationToken
-        );
+            cancellationToken: ct);
 
-        var body = Encoding.UTF8.GetBytes(
-            JsonSerializer.Serialize(message)
-        );
+        var body = JsonSerializer.SerializeToUtf8Bytes(message);
 
         var properties = new BasicProperties
         {
             Persistent = true,
             ContentType = "application/json",
-            MessageId = message.EventId.ToString()
+            MessageId = eventId.ToString()
         };
 
         await channel.BasicPublishAsync(
-            exchange: string.Empty,
+            exchange: "",
             routingKey: queueName,
             mandatory: true,
             basicProperties: properties,
             body: body,
-            cancellationToken: cancellationToken
-        );
+            cancellationToken: ct);
+
+        _logger.LogInformation(
+            "Published {EventType} {EventId} to {Queue}",
+            typeof(T).Name,
+            eventId,
+            queueName);
     }
 }

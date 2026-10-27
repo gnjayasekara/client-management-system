@@ -30,11 +30,21 @@ using ClientManagement.Api.Infrastructure.Messaging.FollowUps;
 
 using ClientManagement.Api.Infrastructure.Messaging.Notes;
 
+// using ClientManagement.Api.Infrastructure.Messaging.Rpc;
+
 using Microsoft.Extensions.Caching.Distributed;
 
 using Serilog;
 
 using ClientManagement.Api.Infrastructure.Caching;
+using ClientManagement.Api.Features.Clients.Commands;
+using ClientManagement.Api.Infrastructure.Messaging.Clients;
+using ClientManagement.Api.Features.Clients.Events;
+
+using ClientManagement.Api.Features.FollowUps.Events;
+using ClientManagement.Api.Features.Notes.Events;
+
+using ClientManagement.Api.Features.Clients.Queries;
 
 
 
@@ -245,9 +255,18 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 builder.Services.AddSignalR();
 
+// builder.Services.AddScoped<GetClientsService>();
+
 builder.Services.AddScoped<
     IRealtimeNotifier,
     SignalRRealtimeNotifier>();
+
+
+
+// builder.Services.AddScoped<ClientSearchCacheVersion>();
+
+
+
 
 
 var rabbitMqEnabled =
@@ -256,28 +275,91 @@ var rabbitMqEnabled =
 
 if (rabbitMqEnabled)
 {
+    // Client events
+    builder.Services.AddScoped<
+        IClientEventPublisher,
+        RabbitMqClientEventPublisher>();
+
+    builder.Services.AddHostedService<ClientCreatedConsumer>();
+
+    
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<ClientUpdatedEvent>(
+            "cms.clients.updated",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+                ILogger<ClientEventConsumer<ClientUpdatedEvent>>>()));
+
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<ClientDeletedEvent>(
+            "cms.clients.deleted",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+            ILogger<ClientEventConsumer<ClientDeletedEvent>>>()));
+
+
+    // FollowUp events
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
         RabbitMqFollowUpEventPublisher>();
 
     builder.Services.AddHostedService<FollowUpCreatedConsumer>();
 
+    
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<FollowUpUpdatedEvent>(
+            "cms.followups.updated",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+                ILogger<ClientEventConsumer<FollowUpUpdatedEvent>>>()));
+
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<FollowUpCompletedEvent>(
+            "cms.followups.completed",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+                ILogger<ClientEventConsumer<FollowUpCompletedEvent>>>()));
+
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<FollowUpDeletedEvent>(
+            "cms.followups.deleted",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+                ILogger<ClientEventConsumer<FollowUpDeletedEvent>>>()));
+
+
+    // Note events
     builder.Services.AddScoped<
         INoteEventPublisher,
         RabbitMqNoteEventPublisher>();
-   
+
     builder.Services.AddHostedService<NoteCreatedConsumer>();
+
+    builder.Services.AddHostedService(sp =>
+        new ClientEventConsumer<NoteDeletedEvent>(
+            "cms.notes.deleted",
+            sp.GetRequiredService<IConfiguration>(),
+            sp.GetRequiredService<
+                ILogger<ClientEventConsumer<NoteDeletedEvent>>>()));
 }
 else
 {
+    // Client events
+    builder.Services.AddScoped<
+        IClientEventPublisher,
+        NoOpClientEventPublisher>();
+
+    // FollowUp events
     builder.Services.AddScoped<
         IFollowUpEventPublisher,
         NoOpFollowUpEventPublisher>();
 
+    // Note events
     builder.Services.AddScoped<
         INoteEventPublisher,
         NoOpNoteEventPublisher>();
 }
+
 
 
 

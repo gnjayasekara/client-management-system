@@ -7,5 +7,17 @@ public interface IFollowUpEventPublisher
 {
     Task PublishCreatedAsync(
         FollowUpCreatedEvent message,
-        CancellationToken cancellationToken);
+        CancellationToken ct);
+
+    Task PublishUpdatedAsync(
+        FollowUpUpdatedEvent message,
+        CancellationToken ct);
+
+    Task PublishCompletedAsync(
+        FollowUpCompletedEvent message,
+        CancellationToken ct);
+
+    Task PublishDeletedAsync(
+        FollowUpDeletedEvent message,
+        CancellationToken ct);
 }

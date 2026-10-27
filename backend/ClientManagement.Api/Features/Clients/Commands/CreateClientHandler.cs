@@ -3,6 +3,9 @@ using ClientManagement.Api.Features.Clients.DTOs;
 using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using ClientManagement.Api.Infrastructure.Realtime;
+using ClientManagement.Api.Features.Clients.Events;
+
+using ClientManagement.Api.Infrastructure.Messaging.Clients;
 
 namespace ClientManagement.Api.Features.Clients.Commands;
 
@@ -12,8 +15,14 @@ public static class CreateClientHandler
         CreateClientRequest request,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        IClientEventPublisher eventPublisher,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+
+        var logger = loggerFactory.CreateLogger(
+            "CreateClientHandler");
+
         var client = new Client
         {
             Name = request.Name.Trim(),
@@ -27,13 +36,53 @@ public static class CreateClientHandler
         db.Clients.Add(client);
         await db.SaveChangesAsync(ct);
 
-         // 2. Notify connected users after successful save
-        await realtimeNotifier.ClientChangedAsync(
+         // 2. Notify connected users 
+        try
+        {
+            await realtimeNotifier.ClientChangedAsync(
+                client.Id,
+                "Created",
+                ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "SignalR notification failed for Client {ClientId}",
+                client.Id);
+        }
+
+
+        var clientCreatedEvent = new ClientCreatedEvent(
+            Guid.NewGuid(),
             client.Id,
-            "Created",
-            ct
+            client.Name,
+            DateTime.UtcNow
         );
 
+        try
+        {
+            await eventPublisher.PublishCreatedAsync(
+                clientCreatedEvent,
+                ct
+            );
+
+            logger.LogInformation(
+                "Published ClientCreated event {EventId} for Client {ClientId}",
+                clientCreatedEvent.EventId,
+                client.Id
+            );
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "RabbitMQ publishing failed for Client {ClientId}",
+                client.Id
+            );
+        }
+
+        
         var response = new ClientResponse(
             client.Id,
             client.Name,

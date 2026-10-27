@@ -9,6 +9,8 @@ using FluentValidation;
 using ClientManagement.Api.Infrastructure.Identity;
 using ClientManagement.Api.Infrastructure.Realtime;
 
+using ClientManagement.Api.Features.FollowUps.Events;
+
 
 namespace ClientManagement.Api.Features.FollowUps;
 
@@ -59,6 +61,7 @@ public static class FollowUpEndpoints
             IValidator<UpdateFollowUpRequest> validator,
             AppDbContext db,
             IRealtimeNotifier realtimeNotifier,
+            IFollowUpEventPublisher eventPublisher,
             ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
@@ -70,7 +73,7 @@ public static class FollowUpEndpoints
                     result.ToDictionary());
 
             return await UpdateFollowUpHandler.HandleAsync(
-                id, request, db, realtimeNotifier, loggerFactory, ct);
+                id, request, db, realtimeNotifier,eventPublisher, loggerFactory, ct);
         });
 
         
@@ -88,8 +91,7 @@ public static class FollowUpEndpoints
             policy.RequireRole(
                 AppRoles.SuperAdmin,
                 AppRoles.Admin,
-                AppRoles.Manager
-            ))
+                AppRoles.Manager))
         .Produces(StatusCodes.Status204NoContent)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status403Forbidden)

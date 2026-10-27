@@ -11,4 +11,11 @@ public sealed class NoOpNoteEventPublisher : INoteEventPublisher
     {
         return Task.CompletedTask;
     }
+
+    public Task PublishDeletedAsync(
+        NoteDeletedEvent message,
+        CancellationToken ct)
+    {
+        return Task.CompletedTask;
+    }
 }
