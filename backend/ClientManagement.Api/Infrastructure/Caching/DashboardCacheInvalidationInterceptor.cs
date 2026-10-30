@@ -11,7 +11,8 @@ public sealed class DashboardCacheInvalidationInterceptor
     private readonly IDistributedCache _cache;
     private readonly ILogger<DashboardCacheInvalidationInterceptor> _logger;
 
-    private bool _shouldInvalidate;
+    private bool _invalidateDashboard;
+    private bool _invalidateClients;
 
     public DashboardCacheInvalidationInterceptor(
         IDistributedCache cache,
@@ -26,18 +27,23 @@ public sealed class DashboardCacheInvalidationInterceptor
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        
-        eventData.Context?.ChangeTracker.DetectChanges();
+        var context = eventData.Context;
 
-        _shouldInvalidate =
-            eventData.Context?.ChangeTracker.Entries()
-                .Any(entry =>
-                    (entry.Metadata.ClrType.Name == "Client" ||
-                     entry.Metadata.ClrType.Name == "FollowUp") &&
-                    (entry.State == EntityState.Added ||
-                     entry.State == EntityState.Modified ||
-                     entry.State == EntityState.Deleted))
-            == true;
+        context?.ChangeTracker.DetectChanges();
+
+        var changedEntries = context?.ChangeTracker.Entries()
+            .Where(entry =>
+                entry.State == EntityState.Added ||
+                entry.State == EntityState.Modified ||
+                entry.State == EntityState.Deleted)
+            .ToList();
+
+        _invalidateDashboard = changedEntries?.Any(entry =>
+            entry.Metadata.ClrType.Name == "Client" ||
+            entry.Metadata.ClrType.Name == "FollowUp") == true;
+
+        _invalidateClients = changedEntries?.Any(entry =>
+            entry.Metadata.ClrType.Name == "Client") == true;
 
         return new ValueTask<InterceptionResult<int>>(result);
     }
@@ -47,32 +53,67 @@ public sealed class DashboardCacheInvalidationInterceptor
         int result,
         CancellationToken cancellationToken = default)
     {
-        var invalidate = _shouldInvalidate;
-        _shouldInvalidate = false;
+        var invalidateDashboard = _invalidateDashboard;
+        var invalidateClients = _invalidateClients;
 
-        if (!invalidate)
-            return result;
+        _invalidateDashboard = false;
+        _invalidateClients = false;
 
-        try
+        if (invalidateDashboard)
         {
-            await _cache.RemoveAsync(
-                DashboardCacheKeys.Stats,
-                cancellationToken
-            );
+            try
+            {
+                await _cache.RemoveAsync(
+                    DashboardCacheKeys.Stats,
+                    cancellationToken);
 
-            _logger.LogInformation(
-                "Dashboard cache INVALIDATED after database changes");
+                _logger.LogInformation(
+                    "Dashboard cache INVALIDATED after database changes");
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Dashboard cache invalidation failed");
+            }
         }
-        catch (OperationCanceledException)
-            when (cancellationToken.IsCancellationRequested)
+
+        if (invalidateClients)
         {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(
-                ex,
-                "Dashboard cache invalidation failed");
+            try
+            {
+                var newVersion = Guid.NewGuid().ToString("N");
+
+                await _cache.SetStringAsync(
+                    ClientCacheKeys.Version,
+                    newVersion,
+                    new DistributedCacheEntryOptions
+                    {
+                        AbsoluteExpirationRelativeToNow =
+                            TimeSpan.FromDays(1)
+                    },
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Client cache INVALIDATED. New version: {Version}",
+                    newVersion);
+            }
+            catch (OperationCanceledException)
+                when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(
+                    ex,
+                    "Client cache invalidation failed");
+            }
         }
 
         return result;
@@ -82,7 +123,8 @@ public sealed class DashboardCacheInvalidationInterceptor
         DbContextErrorEventData eventData,
         CancellationToken cancellationToken = default)
     {
-        _shouldInvalidate = false;
+        _invalidateDashboard = false;
+        _invalidateClients = false;
 
         return Task.CompletedTask;
     }

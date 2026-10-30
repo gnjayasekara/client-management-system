@@ -22,3 +22,5 @@ data:
   RabbitMq__UserName: "cmsapp"
 
   Redis__ConnectionString: "cms-redis:6379"
+
+  Seq__ServerUrl: "http://cms-seq:80"

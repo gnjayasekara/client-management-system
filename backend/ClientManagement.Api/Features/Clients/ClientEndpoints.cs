@@ -3,6 +3,7 @@ using ClientManagement.Api.Features.Clients.Commands;
 using ClientManagement.Api.Features.Clients.DTOs;
 using ClientManagement.Api.Features.Clients.Queries;
 using ClientManagement.Api.Infrastructure.Data;
+using ClientManagement.Api.Infrastructure.Messaging.Clients;
 using ClientManagement.Api.Infrastructure.Realtime;
 using FluentValidation;
 
@@ -30,6 +31,8 @@ public static class ClientEndpoints
             IValidator<CreateClientRequest> validator,
             AppDbContext db,
             IRealtimeNotifier realtimeNotifier,
+            IClientEventPublisher eventPublisher,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(request, ct);
@@ -41,6 +44,8 @@ public static class ClientEndpoints
                 request,
                 db,
                 realtimeNotifier,
+                eventPublisher,
+                loggerFactory,
                 ct
             );
         });
@@ -52,6 +57,8 @@ public static class ClientEndpoints
             IValidator<UpdateClientRequest> validator,
             AppDbContext db,
             IRealtimeNotifier realtimeNotifier,
+            IClientEventPublisher eventPublisher,
+            ILoggerFactory loggerFactory,
             CancellationToken ct) =>
         {
             var result = await validator.ValidateAsync(request, ct);
@@ -60,13 +67,30 @@ public static class ClientEndpoints
                 return Results.ValidationProblem(result.ToDictionary());
 
             return await UpdateClientHandler.HandleAsync(
-                id, request, db, realtimeNotifier, ct);
+                id, request, db, realtimeNotifier, eventPublisher, loggerFactory, ct);
         });
 
-        group.MapDelete(
-            "/{id:int}",
-            DeleteClientHandler.HandleAsync
-        ).RequireAuthorization(policy => policy.RequireRole(ClientManagement.Api.Infrastructure.Identity.AppRoles.Admin));
+        
+        group.MapDelete("/{id:int}", async (
+            int id,
+            AppDbContext db,
+            IRealtimeNotifier realtimeNotifier,
+            IClientEventPublisher eventPublisher,
+            ILoggerFactory loggerFactory,
+            CancellationToken ct) =>
+        {
+            return await DeleteClientHandler.HandleAsync(
+                id,
+                db,
+                realtimeNotifier,
+                eventPublisher,
+                loggerFactory,
+                ct);
+        })
+        .RequireAuthorization(policy =>
+            policy.RequireRole(
+                ClientManagement.Api.Infrastructure.Identity.AppRoles.Admin));
+
 
         return group;
     }

@@ -453,7 +453,7 @@ public static class AuthEndpoints
         });
 
 
-        // 2. Forgot Password (Generates standard Identity PasswordResetToken)
+        // 2. Forgot Password 
         
         group.MapPost("/forgot-password", async (
             ForgotPasswordRequest request,
@@ -532,7 +532,7 @@ public static class AuthEndpoints
         });
 
 
-        // 3. Reset Password (Validates standard Identity PasswordResetToken)
+        // 3. Reset Password 
         
         group.MapPost("/reset-password", async (
             ResetPasswordRequest request,

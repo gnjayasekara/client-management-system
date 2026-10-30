@@ -22,8 +22,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
     protected override async Task ExecuteAsync(
         CancellationToken stoppingToken)
     {
-        // Retry initial connections so RabbitMQ being temporarily
-        // unavailable does not immediately stop the API.
+        
         while (!stoppingToken.IsCancellationRequested)
         {
             try
@@ -108,8 +107,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
         {
             try
             {
-                // RabbitMQ delivery bodies must be copied or
-                // deserialized before the callback returns.
+                
                 var message =
                     JsonSerializer.Deserialize<FollowUpCreatedEvent>(
                         ea.Body.Span);
@@ -129,8 +127,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
                     message.ClientId
                 );
 
-                // For this exercise, logging is our processing step.
-                // Acknowledge only after it completes.
+                
                 await channel.BasicAckAsync(
                     deliveryTag: ea.DeliveryTag,
                     multiple: false
@@ -144,9 +141,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
                     "Rejecting without requeue."
                 );
 
-                // Avoid endlessly retrying malformed JSON.
-                // No dead-letter exchange is configured yet,
-                // so this drops the rejected message.
+                
                 await channel.BasicRejectAsync(
                     deliveryTag: ea.DeliveryTag,
                     requeue: false
@@ -180,7 +175,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
             queueName
         );
 
-        // Keep the worker alive while monitoring connectivity.
+        
         while (!stoppingToken.IsCancellationRequested &&
                connection.IsOpen &&
                channel.IsOpen)

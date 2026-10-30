@@ -4,6 +4,9 @@ using ClientManagement.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using ClientManagement.Api.Infrastructure.Realtime;
 
+using ClientManagement.Api.Features.Clients.Events;
+using ClientManagement.Api.Infrastructure.Messaging.Clients;
+
 namespace ClientManagement.Api.Features.Clients.Commands;
 
 public static class UpdateClientHandler
@@ -13,8 +16,13 @@ public static class UpdateClientHandler
         UpdateClientRequest request,
         AppDbContext db,
         IRealtimeNotifier realtimeNotifier,
+        IClientEventPublisher eventPublisher,
+        ILoggerFactory loggerFactory,
         CancellationToken ct)
     {
+        var logger = loggerFactory.CreateLogger(
+                    "UpdateClientHandler");
+
         var client = await db.Clients
             .FirstOrDefaultAsync(x => x.Id == id, ct);
 
@@ -30,11 +38,40 @@ public static class UpdateClientHandler
 
         await db.SaveChangesAsync(ct);
 
-        await realtimeNotifier.ClientChangedAsync(
-            client.Id,
-            "Updated",
-            ct
-        );
+        try
+        {
+            await realtimeNotifier.ClientChangedAsync(
+                client.Id, "Updated", ct);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex, "SignalR failed for Client {ClientId}", client.Id);
+        }
+
+        // RabbitMQ event publishing
+        try
+        {
+            var clientUpdatedEvent = new ClientUpdatedEvent(
+                Guid.NewGuid(),
+                client.Id,
+                client.Name,
+                DateTime.UtcNow);
+
+            await eventPublisher.PublishUpdatedAsync(
+                clientUpdatedEvent, ct);
+
+            logger.LogInformation(
+                "Published ClientUpdated event for Client {ClientId}",
+                client.Id);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "RabbitMQ publishing failed for Client {ClientId}",
+                client.Id);
+        }
 
         return Results.NoContent();
     }

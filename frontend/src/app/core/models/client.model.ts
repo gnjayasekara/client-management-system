@@ -10,6 +10,8 @@ export interface Client {
   createdAt: string;
 }
 
+
+
 export interface CreateClientRequest {
   name: string;
   company: string | null;

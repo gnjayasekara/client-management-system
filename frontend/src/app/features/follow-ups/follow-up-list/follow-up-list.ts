@@ -21,6 +21,9 @@ import { AuthService } from '../../../core/services/auth.service';
 import { RealtimeService } from '../../../core/services/realtime.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { ClientService } from '../../../core/services/client';
+import { Client } from '../../../core/models/client.model';
+
 @Component({
   selector: 'app-follow-up-list',
   imports: [FormsModule, DatePipe, RouterLink],
@@ -48,67 +51,117 @@ export class FollowUpList implements OnInit, OnDestroy {
   private readonly realtimeService = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
 
+  private readonly clientService = inject(ClientService);
+
+  readonly clients = signal<Client[]>([]);
+  readonly clientLoading = signal(false);
+  readonly clientError = signal('');
+
+  
+  readonly allFollowUps = signal<FollowUp[]>([]);
+
+  clientSearch = '';
+
+  get filteredClients(): Client[] {
+    const term = this.clientSearch.trim().toLowerCase();
+
+    return this.clients().filter(client =>
+      client.name.toLowerCase().includes(term)
+    );
+  }
 
 
   statusFilter = 'all';
-  clientIdFilter: number | null = null;
 
   ngOnInit(): void {
+    this.loadClients();
     this.loadFollowUps();
-    
-  this.realtimeService.followUpChanged$
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe(() => this.loadFollowUps());
 
-  this.realtimeService.clientChanged$
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe(() => this.loadFollowUps());
+    this.realtimeService.followUpChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadFollowUps());
 
-  this.realtimeService.reconnected$
-    .pipe(takeUntilDestroyed(this.destroyRef))
-    .subscribe(() => this.loadFollowUps());
+    this.realtimeService.clientChanged$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadClients();
+        this.loadFollowUps();
+      });
 
+    this.realtimeService.reconnected$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadClients();
+        this.loadFollowUps();
+      });
   }
 
   ngOnDestroy(): void {
     this.request?.unsubscribe();
   }
 
+  loadClients(): void {
+    this.clientLoading.set(true);
+    this.clientError.set('');
+
+    this.clientService.getClients().subscribe({
+      next: clients => {
+        this.clients.set(clients);
+        this.clientLoading.set(false);
+      },
+      error: () => {
+        this.clientLoading.set(false);
+        this.clientError.set('Unable to load clients.');
+      }
+    });
+  }
+
+  
   loadFollowUps(): void {
     this.filterError.set('');
-
-    if (
-      this.clientIdFilter !== null &&
-      (!Number.isInteger(this.clientIdFilter) ||
-        this.clientIdFilter <= 0)
-    ) {
-      this.filterError.set('Enter a valid positive client ID.');
-      return;
-    }
 
     this.request?.unsubscribe();
 
     this.loading.set(true);
     this.errorMessage.set('');
 
-    let isCompleted: boolean | null = null;
+    // Capture the filters when Apply Filters is clicked.
+    const searchTerm = this.clientSearch.trim().toLowerCase();
+    const selectedStatus = this.statusFilter;
 
-    if (this.statusFilter === 'pending') {
-      isCompleted = false;
-    } else if (this.statusFilter === 'completed') {
-      isCompleted = true;
-    }
-
+    // Load all FollowUps so name matching can happen in Angular.
     this.request = this.followUpService
-      .getFollowUps(this.clientIdFilter, isCompleted)
+      .getFollowUps(null, null)
       .pipe(
         finalize(() => this.loading.set(false))
       )
       .subscribe({
-        next: response => {
-          this.followUps.set(response);
+        next: (response: FollowUp[]) => {
+          this.allFollowUps.set(response);
+
+          const filteredResults = response.filter(followUp => {
+            // Match full or partial client name.
+            const matchesClient =
+              !searchTerm ||
+              (followUp.clientName ?? '')
+                .toLowerCase()
+                .includes(searchTerm);
+
+            // Match selected completion status.
+            const matchesStatus =
+              selectedStatus === 'all' ||
+              (selectedStatus === 'completed' &&
+                followUp.isCompleted) ||
+              (selectedStatus === 'pending' &&
+                !followUp.isCompleted);
+
+            return matchesClient && matchesStatus;
+          });
+
+          this.followUps.set(filteredResults);
         },
         error: (error: HttpErrorResponse) => {
+          this.allFollowUps.set([]);
           this.followUps.set([]);
 
           this.errorMessage.set(
@@ -120,9 +173,11 @@ export class FollowUpList implements OnInit, OnDestroy {
       });
   }
 
+
   clearFilters(): void {
+    this.clientSearch = '';
     this.statusFilter = 'all';
-    this.clientIdFilter = null;
+
     this.loadFollowUps();
   }
 
