@@ -8,11 +8,12 @@ resources:
   - ../../base
   - rabbitmq.yaml
   - redis.yaml
+  - seq.yaml
 
 images:
   - name: ghcr.io/gnjayasekara/clientmanagement-api
-    newTag: e7c572348b99b707ffb1b0be8835617dd61a1047
+    newTag: events-v1
 
   - name: ghcr.io/gnjayasekara/clientmanagement-frontend
-    newTag: 287ea8b48f4add8cf3e81b011d1acecb591f22ed
+    newTag: followup-search-v3
 

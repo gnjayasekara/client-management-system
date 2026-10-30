@@ -175,7 +175,7 @@ public sealed class FollowUpCreatedConsumer : BackgroundService
             queueName
         );
 
-        // Keep the worker alive while monitoring connectivity.
+        
         while (!stoppingToken.IsCancellationRequested &&
                connection.IsOpen &&
                channel.IsOpen)

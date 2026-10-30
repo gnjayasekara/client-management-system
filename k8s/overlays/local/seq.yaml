@@ -1,0 +1,77 @@
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cms-seq-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cms-seq
+spec:
+  type: ClusterIP
+  selector:
+    app: cms-seq
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms-seq
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: cms-seq
+  template:
+    metadata:
+      labels:
+        app: cms-seq
+    spec:
+      containers:
+        - name: seq
+          image: datalust/seq:latest
+          ports:
+            - containerPort: 80
+              name: http
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: SEQ_FIRSTRUN_ADMINPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cms-seq-auth
+                  key: SEQ_FIRSTRUN_ADMINPASSWORD
+          volumeMounts:
+            - name: seq-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+      volumes:
+        - name: seq-data
+          persistentVolumeClaim:
+            claimName: cms-seq-data

@@ -156,3 +156,6 @@ database-backups/
 *.bak
 
 learning/
+
+backend/ClientManagement.Contracts/
+backend/ClientManagement.Worker/
